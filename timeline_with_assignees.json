@@ -5,9 +5,6 @@
 			"name": "ИС \"ДогХаб\"",
 			"progress": 0,
 			"progressByWorklog": false,
-			"relevance": 0,
-			"type": "",
-			"typeId": "",
 			"description": "",
 			"code": "",
 			"level": 0,
@@ -23,7 +20,26 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160933103_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				},
+				{
+					"id": "tmp_1757160933103_2",
+					"resourceId": "tmp_2",
+					"roleId": "tmp_2",
+					"effort": 0
+				},
+				{
+					"id": "tmp_1757160933103_3",
+					"resourceId": "tmp_3",
+					"roleId": "tmp_3",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756878660781",
@@ -48,7 +64,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160717315_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_fk1756876260891_1",
@@ -73,7 +96,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160721338_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756878674783",
@@ -93,11 +123,19 @@
 			"end": 1758560399999,
 			"startIsMilestone": false,
 			"endIsMilestone": false,
+			"collapsed": false,
 			"canWrite": true,
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160724471_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_fk1756876341256_1",
@@ -122,7 +160,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160732863_1",
+					"resourceId": "tmp_3",
+					"roleId": "tmp_3",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756876550312",
@@ -147,7 +192,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160738294_1",
+					"resourceId": "tmp_2",
+					"roleId": "tmp_2",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756876623127",
@@ -172,7 +224,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160742439_1",
+					"resourceId": "tmp_2",
+					"roleId": "tmp_2",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756876664210",
@@ -197,7 +256,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160746779_1",
+					"resourceId": "tmp_2",
+					"roleId": "tmp_2",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_fk1756876356552_1",
@@ -222,7 +288,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160763731_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756876595863",
@@ -247,7 +320,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160771150_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_fk1756876370470_1",
@@ -272,7 +352,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160774318_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756876704099",
@@ -297,16 +384,20 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160782609_1",
+					"resourceId": "tmp_2",
+					"roleId": "tmp_2",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756879683844",
 			"name": "Создание ПО",
 			"progress": 0,
 			"progressByWorklog": false,
-			"relevance": 0,
-			"type": "",
-			"typeId": "",
 			"description": "",
 			"code": "",
 			"level": 1,
@@ -317,20 +408,37 @@
 			"end": 1762793999999,
 			"startIsMilestone": false,
 			"endIsMilestone": false,
+			"collapsed": false,
 			"canWrite": true,
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160793735_1",
+					"resourceId": "tmp_2",
+					"roleId": "tmp_2",
+					"effort": 0
+				},
+				{
+					"id": "tmp_1757160793735_2",
+					"resourceId": "tmp_3",
+					"roleId": "tmp_3",
+					"effort": 0
+				},
+				{
+					"id": "tmp_1757161155785_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756876717409",
 			"name": "Разработка серверной части приложения",
 			"progress": 0,
 			"progressByWorklog": false,
-			"relevance": 0,
-			"type": "",
-			"typeId": "",
 			"description": "",
 			"code": "",
 			"level": 2,
@@ -346,16 +454,26 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160799960_1",
+					"resourceId": "tmp_2",
+					"roleId": "tmp_2",
+					"effort": 0
+				},
+				{
+					"id": "tmp_1757161265368_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756876730301",
 			"name": "Реализация клиентской части web-приложения",
 			"progress": 0,
 			"progressByWorklog": false,
-			"relevance": 0,
-			"type": "",
-			"typeId": "",
 			"description": "",
 			"code": "",
 			"level": 2,
@@ -371,7 +489,20 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160810894_1",
+					"resourceId": "tmp_3",
+					"roleId": "tmp_3",
+					"effort": 0
+				},
+				{
+					"id": "tmp_1757161185761_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_fk1756876379253_1",
@@ -396,7 +527,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160819108_1",
+					"resourceId": "tmp_3",
+					"roleId": "tmp_3",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_1756876740749",
@@ -421,7 +559,20 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160828963_1",
+					"resourceId": "tmp_2",
+					"roleId": "tmp_2",
+					"effort": 0
+				},
+				{
+					"id": "tmp_1757160828963_2",
+					"resourceId": "tmp_3",
+					"roleId": "tmp_3",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_fk1756876393739_1",
@@ -446,7 +597,14 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160836562_1",
+					"resourceId": "tmp_3",
+					"roleId": "tmp_3",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_fk1756876407188_1",
@@ -471,7 +629,20 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160846702_1",
+					"resourceId": "tmp_3",
+					"roleId": "tmp_3",
+					"effort": 0
+				},
+				{
+					"id": "tmp_1757160846702_2",
+					"resourceId": "tmp_2",
+					"roleId": "tmp_2",
+					"effort": 0
+				}
+			]
 		},
 		{
 			"id": "tmp_fk1756876778353_1",
@@ -496,45 +667,54 @@
 			"canAdd": true,
 			"canDelete": true,
 			"canAddIssue": true,
-			"assigs": []
+			"assigs": [
+				{
+					"id": "tmp_1757160862842_1",
+					"resourceId": "tmp_1",
+					"roleId": "tmp_1",
+					"effort": 0
+				},
+				{
+					"id": "tmp_1757160862842_2",
+					"resourceId": "tmp_3",
+					"roleId": "tmp_3",
+					"effort": 0
+				}
+			]
 		}
 	],
-	"selectedRow": 4,
+	"selectedRow": 13,
 	"deletedTaskIds": [],
 	"resources": [
 		{
 			"id": "tmp_1",
-			"name": "Resource 1"
+			"name": "Горбунов В.Е."
 		},
 		{
 			"id": "tmp_2",
-			"name": "Resource 2"
+			"name": "Тычков Т.В."
 		},
 		{
 			"id": "tmp_3",
-			"name": "Resource 3"
-		},
-		{
-			"id": "tmp_4",
-			"name": "Resource 4"
+			"name": "Шевцов А.С."
 		}
 	],
 	"roles": [
 		{
 			"id": "tmp_1",
-			"name": "Project Manager"
+			"name": "Методолог, менеджер проекта"
 		},
 		{
 			"id": "tmp_2",
-			"name": "Worker"
+			"name": "Архитектор"
 		},
 		{
 			"id": "tmp_3",
-			"name": "Stakeholder"
+			"name": "Внедренец, аналитик"
 		},
 		{
 			"id": "tmp_4",
-			"name": "Customer"
+			"name": "Функциональный потребитель"
 		}
 	],
 	"canAdd": true,
