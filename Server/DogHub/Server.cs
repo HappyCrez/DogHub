@@ -22,7 +22,6 @@ class Server
                 TcpClient client = listener.AcceptTcpClient();
                 Console.WriteLine($"Подключен клиент: {client.Client.RemoteEndPoint}");
                 
-                // Запускаем обработку клиента в отдельном потоке
                 Thread clientThread = new Thread(() => HandleClient(client));
                 clientThread.Start(client);
             }
@@ -50,7 +49,7 @@ class Server
             
             while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
             {
-                // Отправляем полученные данные обратно клиенту
+                // Simple Echo
                 stream.Write(buffer, 0, bytesRead);
                 string data = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                 Console.WriteLine($"Получено от {client.Client.RemoteEndPoint}: {data}");
