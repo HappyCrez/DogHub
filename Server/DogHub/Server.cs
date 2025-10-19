@@ -58,13 +58,16 @@ class Server
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка при работе с клиентом {client.Client.RemoteEndPoint}: {ex.Message}");
+            Console.WriteLine($"Ошибка при работе с клиентом: {ex.Message}");
         }
         finally
         {
+            if (client != null)
+            {
+                Console.WriteLine($"Клиент {client.Client.RemoteEndPoint} отключен.");
+                client.Close();
+            }
             stream?.Close();
-            client?.Close();
-            Console.WriteLine($"Клиент {client.Client.RemoteEndPoint} отключен.");
         }
     }
 }
