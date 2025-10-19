@@ -4,10 +4,16 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
+/// <summary>
+/// Сервер прослушивает порт 5055 на подключения и выводит эхо в консоль
+/// </summary>
 class Server
 {
     private const int Port = 5055;
     
+    /// <summary>
+    /// Открывает сервер и запускает бесконечный цикл по прослушиванию порта
+    /// </summary>
     public Server()
     {
         TcpListener? listener = null;
@@ -36,6 +42,10 @@ class Server
         }
     }
     
+    /// <summary>
+    /// Метод обработки подключений клиентов
+    /// </summary>
+    /// <param name="obj">Параметр для передачи данных в поток</param>
     private void HandleClient(object obj)
     {
         TcpClient client = (TcpClient)obj;
