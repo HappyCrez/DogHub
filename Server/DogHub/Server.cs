@@ -10,7 +10,7 @@ class Server
     
     public Server()
     {
-        TcpListener listener = null;
+        TcpListener? listener = null;
         try
         {
             listener = new TcpListener(IPAddress.Any, Port);
@@ -23,7 +23,7 @@ class Server
                 Console.WriteLine($"Подключен клиент: {client.Client.RemoteEndPoint}");
                 
                 // Запускаем обработку клиента в отдельном потоке
-                Thread clientThread = new Thread(HandleClient);
+                Thread clientThread = new Thread(() => HandleClient(client));
                 clientThread.Start(client);
             }
         }
@@ -40,7 +40,7 @@ class Server
     private void HandleClient(object obj)
     {
         TcpClient client = (TcpClient)obj;
-        NetworkStream stream = null;
+        NetworkStream? stream = null;
         
         try
         {
