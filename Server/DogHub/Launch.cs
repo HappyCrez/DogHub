@@ -4,7 +4,7 @@ public class Launch
 {
     static public void Main(string [] args)
     {
-        Console.WriteLine("Hello world");
+        Server server = new Server();
     }
 
     static public int add(int a, int b)
