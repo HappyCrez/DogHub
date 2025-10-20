@@ -1,3 +1,7 @@
+using System;
+using Npgsql;
+using System.Data;
+
 /// <summary>
 /// Класс поддерживает подключение к базе данных и производит операции по 
 /// записи и чтению из БД
@@ -14,6 +18,19 @@ class DataBaseModel
     public DataBaseModel()
     {
         // TODO::Подключение к БД
+        string connectionConfig = "Host=localhost;Port=5432;Username=postgres;Password=lock;Database=company_db";
+        using var connection = new NpgsqlConnection(connectionConfig);
+
+        try
+        {
+            connection.Open();
+            Console.WriteLine("Подключен к PostgreSQL");
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка: {ex.Message}");
+        }
     }
 
     /// <summary>
