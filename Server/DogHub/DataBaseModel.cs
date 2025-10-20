@@ -15,12 +15,10 @@ class DataBaseModel
     /// <summary>
     /// При создании класса происходит подключение к БД
     /// </summary>
-    public DataBaseModel()
+    public DataBaseModel(string connection_config)
     {
-        // TODO::Подключение к БД
-        string connectionConfig = "Host=localhost;Port=5432;Username=postgres;Password=lock;Database=company_db";
-        using var connection = new NpgsqlConnection(connectionConfig);
-
+        // TODO::Ассинхронное подключение к БД
+        using var connection = new NpgsqlConnection(connection_config);
         try
         {
             connection.Open();

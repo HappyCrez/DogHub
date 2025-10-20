@@ -17,7 +17,9 @@ public class Launch
         // Нужно распараллеливать работу
         // М.б. внутри одного потока -> программно
         // Server server = new Server();
-        DataBaseModel data_base = new DataBaseModel();
+
+        string connection_config = "Host=localhost;Port=5432;Username=postgres;Password=lock;Database=company_db";
+        DataBaseModel data_base = new DataBaseModel(connection_config);
     }
 
     static public int add(int a, int b)
