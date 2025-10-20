@@ -12,6 +12,8 @@ Project is developing by order Altai state technical university in course "Devel
 1. DotNet version 9
 
 # Build instruction
+To use server you should start PostgreSQL and  expand database using Docs/doghub_db.sql script. It will create "doghub_db" database
+
 To build server use commands: 
 ```
 dotnet build
