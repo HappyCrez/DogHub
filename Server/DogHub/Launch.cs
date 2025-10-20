@@ -11,7 +11,15 @@ public class Launch
         // TODO::Чтение и парсинг файла конфигурации
         // Например для передачи порта открытия сервера, имени БД для подключения
         // логина и пароля пользователя БД и тд. 
-        Server server = new Server();
+
+        // Сейчас server забирает весь поток на себя
+        // Там стоит while true
+        // Нужно распараллеливать работу
+        // М.б. внутри одного потока -> программно
+        // Server server = new Server();
+
+        string connection_config = "Host=localhost;Port=5432;Username=postgres;Password=lock;Database=company_db";
+        DataBaseModel data_base = new DataBaseModel(connection_config);
     }
 
     static public int add(int a, int b)
