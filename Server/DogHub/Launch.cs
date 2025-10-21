@@ -18,11 +18,13 @@ public class Launch
         // М.б. внутри одного потока -> программно
         // Server server = new Server();
 
-        string connection_config = "Host=localhost;Port=5432;Username=postgres;Password=lock;Database=company_db";
-        DataBaseModel data_base = new DataBaseModel(connection_config);
+        // login&password будет отличаться, нужно писать конфигуратор 
+        string connectionConfig = "Host=localhost;Port=5432;Username=postgres;Password=lock;Database=doghub_db";
+        DataBaseModel dataBase = new DataBaseModel(connectionConfig);
+        Console.WriteLine(dataBase.ExecuteSQL("select * from users"));
     }
 
-    static public int add(int a, int b)
+    static public int Add(int a, int b)
     {
         return a + b;
     } 
