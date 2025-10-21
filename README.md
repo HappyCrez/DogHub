@@ -1,27 +1,33 @@
-# Professional information system "DogHub"
-Project is developing by order Altai state technical university in course "Development projects"
+# Информационная система "DogHub"
+Проект разрабатывается в рамках курса "Разработка и реализация проектов" в Алтайском госсударственном университете им. И.И.Ползунова.
 
-# Project struct
-1. Docs - folder with all theoretical data
-2. timeline.json - time management for jQueryGantt app (github.com/robicch/jQueryGantt)
-3. Server - Server c# directory
-   1. Server/DogHub - source code
-   2. Server/Test - unit test code
+## Структура проекта
+1. Docs - дополнительные данные к проекту
+2. timeline.json - график Гантта распределения времени, запускается с помощью открытого проекта jQueryGantt
+    (github.com/robicch/jQueryGantt)
+3. Server - сервер написан с применение .NET на языке c#
+   1. Server/DogHub - Исходный код сервера
+   2. Server/Test - Автоматизированные тесты
 
-# Dependencies
-1. DotNet version 9
+## Зависимости
+1. DotNet версии 9
+    1. Пакет Npgsql
 
-# Build instruction
-To use server you should start PostgreSQL and  expand database using Docs/doghub_db.sql script. It will create "doghub_db" database
+## Сборка сервера
+Сервер работает с базой данных "postgreSQL". В ней должна быть развернута база doghub_db, скрипт для ее разворачивания лежит в папке Docs/doghub_db.sql
+Данные для тестирования также располагаются в Docs/test_db_data.sql
 
-To build server use commands: 
+Для сборки сервера необходимо: 
 ```
-dotnet build
-dotnet test
-dotnet run --project Server/Doghub
+dotnet build // Соберет сервер и установит зависимости
+dotnet test  // Проведет тестирование ПО
+dotnet run --project Server/Doghub // Запустит сервер
 ```
 
-# Authors
+## Сборка клиента
+Здесь будет описание как работать с клиентской частью программы
+
+# Авторы
 1. Sh1chi
 2. Tychaaa
 3. LexCivis
