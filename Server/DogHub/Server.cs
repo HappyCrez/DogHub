@@ -9,7 +9,7 @@ using System.Threading;
 /// </summary>
 class Server
 {
-    private const int PORT = 5055;
+    private const int Port = 5055;
     
     /// <summary>
     /// Открывает сервер и запускает бесконечный цикл по прослушиванию порта
@@ -19,17 +19,17 @@ class Server
         TcpListener? listener = null;
         try
         {
-            listener = new TcpListener(IPAddress.Any, PORT);
+            listener = new TcpListener(IPAddress.Any, Port);
             listener.Start();
-            Console.WriteLine($"Эхо-сервер запущен на порту {PORT}...");
+            Console.WriteLine($"Эхо-сервер запущен на порту {Port}...");
             
             while (true)
             {
                 TcpClient client = listener.AcceptTcpClient();
                 Console.WriteLine($"Подключен клиент: {client.Client.RemoteEndPoint}");
                 
-                Thread client_thread = new Thread(() => HandleClient(client));
-                client_thread.Start(client);
+                Thread clientThread = new Thread(() => HandleClient(client));
+                clientThread.Start(client);
             }
         }
         catch (Exception ex)
@@ -55,13 +55,13 @@ class Server
         {
             stream = client.GetStream();
             byte[] buffer = new byte[1024];
-            int bytes_read;
+            int bytesRead;
             
-            while ((bytes_read = stream.Read(buffer, 0, buffer.Length)) > 0)
+            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
             {
                 // Simple Echo
-                stream.Write(buffer, 0, bytes_read);
-                string data = Encoding.UTF8.GetString(buffer, 0, bytes_read);
+                stream.Write(buffer, 0, bytesRead);
+                string data = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                 Console.WriteLine($"Получено от {client.Client.RemoteEndPoint}: {data}");
             }
         }
