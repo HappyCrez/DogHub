@@ -2,6 +2,10 @@
 
 public class Launch
 {
+    // Сечас конфиг задается в виде строки
+    private const string connectionConfig = "Host=localhost;Port=5432;Username=postgres;Password=lock;Database=doghub_db";
+    private const string pathToSQLCommands = "./Assets/SQLCommands.json";
+    
     /// <summary>
     /// Точка входа в программу
     /// </summary>
@@ -12,15 +16,12 @@ public class Launch
         // Например для передачи порта открытия сервера, имени БД для подключения
         // логина и пароля пользователя БД и тд. 
 
-        // login&password будет отличаться, нужно писать конфигуратор 
-        string connectionConfig = "Host=localhost;Port=5432;Username=postgres;Password=lock;Database=doghub_db";
         DataBaseModel dataBase = new DataBaseModel(connectionConfig);
-        Console.WriteLine(dataBase.ExecuteSQL("select * from users"));
 
-        // Сейчас server забирает весь поток на себя
-        // Там стоит while true
-        // Нужно распараллеливать работу
-        // М.б. внутри одного потока -> программно
+        SQLCommandManager manager = new SQLCommandManager(pathToSQLCommands);
+        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetUsers)));
+        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetApplications)));
+
         Server server = new Server();
     }
 

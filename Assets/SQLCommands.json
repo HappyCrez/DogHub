@@ -1,0 +1,6 @@
+{
+    "get_applications":
+    "select * from applications",
+    "get_users":
+    "select * from users"
+}
