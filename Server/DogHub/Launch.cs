@@ -25,7 +25,7 @@ public class Launch
         Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetPeopleEvents)));
         Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetChiped)));
 
-        Server server = new Server();
+        Server server = new Server(dataBase, manager);
     }
 
     static public int Add(int a, int b)
