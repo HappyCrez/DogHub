@@ -9,7 +9,11 @@ class SQLCommandManager
     private JsonElement jsonData;
 
     public static readonly string GetUsers = "get_users";
-    public static readonly string GetApplications = "get_applications";
+    public static readonly string GetEvents = "get_events";
+    public static readonly string GetPrograms = "get_programs";
+    public static readonly string GetPeopleEvents = "get_people_events";
+    public static readonly string GetChiped = "get_chiped";
+    // TODO::РЕАЛИЗОВАТЬ 6-ой запрос, он требует дополнительных данных для запроса
 
     /// <summary>
     /// Инициализирует менеджера комманд по json файлу с набором комманд

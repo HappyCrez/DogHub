@@ -20,7 +20,10 @@ public class Launch
 
         SQLCommandManager manager = new SQLCommandManager(pathToSQLCommands);
         Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetUsers)));
-        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetApplications)));
+        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetEvents)));
+        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetPrograms)));
+        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetPeopleEvents)));
+        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetChiped)));
 
         Server server = new Server();
     }
