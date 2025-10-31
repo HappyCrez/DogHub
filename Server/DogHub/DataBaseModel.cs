@@ -23,7 +23,9 @@ class DataBaseModel
         {
             result.Append(reader.GetName(i));
             if (i < reader.FieldCount - 1)
+            {
                 result.Append(" | ");
+            }
         }
         result.AppendLine();
 
