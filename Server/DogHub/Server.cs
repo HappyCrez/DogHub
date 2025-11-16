@@ -18,9 +18,9 @@ class Server
 
     public Server(DataBaseModel dbModel, SQLCommandManager sqlCM)
     {
-        this.dbModel = dbModel ?? throw new ArgumentNullException(nameof(dbModel));
-        this.sqlCM = sqlCM ?? throw new ArgumentNullException(nameof(sqlCM));
-
+        this.dbModel = dbModel;
+        this.sqlCM = sqlCM;
+        
         TcpListener? listener = null;
         try
         {
@@ -58,7 +58,9 @@ class Server
     {
         TcpClient? client = state as TcpClient;
         if (client == null)
+        {
             return;
+        }
 
         NetworkStream? stream = null;
 

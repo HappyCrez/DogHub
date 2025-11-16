@@ -1,4 +1,4 @@
-namespace DogHub;
+﻿namespace DogHub;
 
 public class Launch
 {
@@ -20,14 +20,22 @@ public class Launch
 
         // Инициализация работы с БД
         DataBaseModel dataBase = new DataBaseModel(connectionConfig);
+        if (dataBase == null)
+        {
+            throw new InvalidOperationException("Failed to initialize database connection");
+        }
 
         // Загрузка SQL-команд из JSON
-        SQLCommandManager manager = new SQLCommandManager(pathToSQLCommands);
+        SQLCommandManager sqlCM = new SQLCommandManager(pathToSQLCommands);
+        if (sqlCM == null) 
+        {
+            throw new InvalidOperationException("Failed to read sql queries");
+        }
 
         // Запуск HTTP-сервера.
         // Конструктор Server содержит бесконечный цикл AcceptTcpClient,
         // поэтому Main не завершится, пока работает сервер.
-        new Server(dataBase, manager);
+        new Server(dataBase, sqlCM);
     }
 
     public static int Add(int a, int b)
