@@ -5,8 +5,9 @@ using System.Text;
 using System.Threading;
 
 /// <summary>
-/// Простой HTTP-сервер для DogHub.
+/// HTTP-сервер DogHub.
 /// Слушает порт 5055 и отдаёт JSON-API для фронтенда.
+/// Старый текстовый API через параметр ?data=... удалён.
 /// </summary>
 class Server
 {
@@ -15,89 +16,77 @@ class Server
     public DataBaseModel dbModel { get; set; }
     public SQLCommandManager sqlCM { get; set; }
 
-    private readonly TcpListener listener;
-    private bool isRunning;
-
     public Server(DataBaseModel dbModel, SQLCommandManager sqlCM)
     {
-        if (dbModel == null) throw new ArgumentNullException("dbModel");
-        if (sqlCM == null) throw new ArgumentNullException("sqlCM");
+        this.dbModel = dbModel ?? throw new ArgumentNullException(nameof(dbModel));
+        this.sqlCM = sqlCM ?? throw new ArgumentNullException(nameof(sqlCM));
 
-        this.dbModel = dbModel;
-        this.sqlCM = sqlCM;
-
-        listener = new TcpListener(IPAddress.Any, Port);
-        listener.Start();
-        isRunning = true;
-
-        Console.WriteLine("HTTP сервер запущен на http://localhost:" + Port + "/api");
-
-        // Запускаем отдельный поток, который принимает подключения
-        Thread thread = new Thread(ListenLoop);
-        thread.IsBackground = true;
-        thread.Start();
-    }
-
-    /// <summary>
-    /// Основной цикл ожидания клиентов.
-    /// </summary>
-    private void ListenLoop()
-    {
+        TcpListener? listener = null;
         try
         {
-            while (isRunning)
+            listener = new TcpListener(IPAddress.Any, Port);
+            listener.Start();
+            Console.WriteLine($"HTTP сервер запущен на http://localhost:{Port}/api");
+
+            // Бесконечный цикл ожидания клиентов.
+            // Приложение будет жить, пока работает этот цикл.
+            while (true)
             {
                 TcpClient client = listener.AcceptTcpClient();
-                Console.WriteLine("Клиент подключен: " + client.Client.RemoteEndPoint);
+                Console.WriteLine($"Подключен клиент: {client.Client.RemoteEndPoint}");
 
-                // Обработку клиента отдаём в пул потоков
-                ThreadPool.QueueUserWorkItem(HandleClient, client);
+                // Для каждого клиента запускаем отдельный поток обработки.
+                Thread clientThread = new Thread(HandleClient);
+                clientThread.Start(client);
             }
-        }
-        catch (SocketException ex)
-        {
-            Console.WriteLine("Ошибка сокета: " + ex.Message);
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Ошибка сервера: " + ex.Message);
+            Console.WriteLine($"Ошибка сервера: {ex.Message}");
         }
         finally
         {
-            listener.Stop();
+            listener?.Stop();
         }
     }
 
     /// <summary>
     /// Обработка одного клиента: читаем HTTP-запрос и отправляем ответ.
     /// </summary>
-    private void HandleClient(object state)
+    /// <param name="state">TcpClient</param>
+    private void HandleClient(object? state)
     {
-        TcpClient client = state as TcpClient;
+        TcpClient? client = state as TcpClient;
         if (client == null)
-        {
             return;
-        }
 
-        NetworkStream stream = null;
+        NetworkStream? stream = null;
 
         try
         {
             stream = client.GetStream();
 
-            // Чтение HTTP-запроса
+            // Читаем HTTP-запрос целиком (простая реализация для GET).
             byte[] buffer = new byte[8192];
             int bytesRead;
             StringBuilder requestBuilder = new StringBuilder();
 
-            do
+            // Читаем до конца заголовков (пока не встретили \r\n\r\n)
+            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
             {
-                bytesRead = stream.Read(buffer, 0, buffer.Length);
-                if (bytesRead <= 0) break;
+                string chunk = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                requestBuilder.Append(chunk);
 
-                requestBuilder.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
+                if (chunk.Contains("\r\n\r\n"))
+                {
+                    break;
+                }
+
+                if (!stream.DataAvailable)
+                {
+                    break;
+                }
             }
-            while (stream.DataAvailable);
 
             string requestText = requestBuilder.ToString();
 
@@ -118,6 +107,7 @@ class Server
                 return;
             }
 
+            // Первая строка: METHOD PATH HTTP/1.1
             string[] requestLineParts = lines[0].Split(' ');
             if (requestLineParts.Length < 2)
             {
@@ -134,7 +124,7 @@ class Server
                 return;
             }
 
-            // Парсим путь
+            // Работаем только с путями, без старого параметра data
             Uri uri = new Uri("http://localhost" + rawUrl);
             string path = uri.AbsolutePath;
 
@@ -144,7 +134,7 @@ class Server
             // Роутинг API
             if (path == "/")
             {
-                // Простейший ping-эндпоинт
+                // Простой ping-эндпоинт
                 contentType = "text/plain; charset=utf-8";
                 body = "DogHub API is running. Use /api/users, /api/events, /api/programs, /api/people-trainings, /api/chipped-dogs";
             }
@@ -178,7 +168,7 @@ class Server
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Ошибка при работе с клиентом: " + ex.Message);
+            Console.WriteLine($"Ошибка при работе с клиентом: {ex.Message}");
             if (stream != null)
             {
                 try
@@ -195,11 +185,8 @@ class Server
         {
             try
             {
-                Console.WriteLine("Клиент " + client.Client.RemoteEndPoint + " отключен.");
-                if (stream != null)
-                {
-                    stream.Close();
-                }
+                Console.WriteLine($"Клиент {client.Client.RemoteEndPoint} отключен.");
+                stream?.Close();
                 client.Close();
             }
             catch
@@ -219,12 +206,12 @@ class Server
         byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
 
         StringBuilder headers = new StringBuilder();
-        headers.AppendLine("HTTP/1.1 " + statusCode + " " + reasonPhrase);
+        headers.AppendLine($"HTTP/1.1 {statusCode} {reasonPhrase}");
         headers.AppendLine("Date: " + DateTime.UtcNow.ToString("R"));
         headers.AppendLine("Content-Type: " + contentType);
         headers.AppendLine("Content-Length: " + bodyBytes.Length);
         headers.AppendLine("Connection: close");
-        headers.AppendLine("Access-Control-Allow-Origin: *");
+        headers.AppendLine("Access-Control-Allow-Origin: *"); // CORS для фронта
         headers.AppendLine();
 
         byte[] headerBytes = Encoding.ASCII.GetBytes(headers.ToString());
