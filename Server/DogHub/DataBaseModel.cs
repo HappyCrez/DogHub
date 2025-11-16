@@ -1,115 +1,231 @@
 using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Text.Json;
 using Npgsql;
 using System.Data;
 
 /// <summary>
-/// Класс поддерживает подключение к базе данных и производит операции по 
-/// записи и чтению из БД
+/// Класс поддерживает подключение к базе данных и выполняет
+/// операции чтения/записи. Добавлены методы для возврата данных в JSON.
 /// </summary>
 class DataBaseModel
 {
-    private readonly NpgsqlConnection connection;
+    /// <summary>
+    /// Строка подключения к PostgreSQL
+    /// </summary>
+    private readonly string connectionString;
 
     /// <summary>
-    /// Выполняет SELECT запрос и возвращает данные в виде строки
+    /// Создаёт модель БД на основе строки подключения.
+    /// Фактическое подключение создаётся под каждую операцию.
     /// </summary>
-    private string ExecuteQuery(NpgsqlCommand command)
+    /// <param name="connectionString">Строка подключения к PostgreSQL</param>
+    public DataBaseModel(string connectionString)
     {
-        using var reader = command.ExecuteReader();
-        var result = new System.Text.StringBuilder();
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new ArgumentException("Строка подключения не может быть пустой.", nameof(connectionString));
 
-        // Читаем названия колонок
-        for (int i = 0; i < reader.FieldCount; i++)
-        {
-            result.Append(reader.GetName(i));
-            if (i < reader.FieldCount - 1)
-            {
-                result.Append(" | ");
-            }
-        }
-        result.AppendLine();
-
-        // Читаем данные
-        while (reader.Read())
-        {
-            for (int i = 0; i < reader.FieldCount; i++)
-            {
-                result.Append(reader[i]?.ToString() ?? "NULL");
-                if (i < reader.FieldCount - 1)
-                {
-                    result.Append(" | ");
-                }
-            }
-            result.AppendLine();
-        }
-        return result.Length > 0 ? result.ToString() : "Запрос выполнен, данные отсутствуют";
+        this.connectionString = connectionString;
     }
 
     /// <summary>
-    /// Выполняет INSERT, UPDATE, DELETE запросы
+    /// Создаёт новое подключение к БД.
     /// </summary>
-    private string ExecuteNonQuery(NpgsqlCommand command)
+    private NpgsqlConnection CreateConnection()
     {
-        int rowsAffected = command.ExecuteNonQuery();
-        return $"Запрос выполнен. Затронуто строк: {rowsAffected}";
+        return new NpgsqlConnection(connectionString);
     }
 
     /// <summary>
-    /// При создании класса происходит подключение к БД
-    /// </summary>
-    public DataBaseModel(string connectionConfig)
-    {
-        // TODO::Ассинхронное подключение к БД
-        connection = new NpgsqlConnection(connectionConfig);
-        Connect();
-    }
-
-     /// <summary>
-    /// Синхронное подключение к БД
+    /// Пробное подключение к БД (health-check).
+    /// Можно вызывать один раз при старте приложения.
     /// </summary>
     public void Connect()
     {
-        try
-        {
-            connection.Open();
-            Console.WriteLine("Подключен к PostgreSQL");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Ошибка подключения: {ex.Message}");
-            throw;
-        }
+        using var connection = CreateConnection();
+        connection.Open();
+        Console.WriteLine("Подключен к PostgreSQL");
     }
 
+    // ==========================
+    // Старый API: ExecuteSQL
+    // ==========================
+
     /// <summary>
-    /// Передает sql запрос на выполнение БД
+    /// Выполняет SQL-запрос и возвращает результат в виде текстовой строки.
+    /// Если запрос начинается с SELECT – возвращается табличка "колонки | данные".
+    /// Для остальных запросов возвращается количество затронутых строк.
+    /// Используется, например, в Launch.cs для отладки.
     /// </summary>
-    /// <param name="sql">Строка на языке sql</param>
-    /// <returns>Возвращает ответ от БД</returns>
+    /// <param name="sql">Произвольный SQL-запрос</param>
     public string ExecuteSQL(string sql)
     {
-        if (connection.State != ConnectionState.Open)
-        {
-            throw new InvalidOperationException("Подключение к БД не установлено");
-        }
+        if (string.IsNullOrWhiteSpace(sql))
+            return "Пустой SQL-запрос.";
 
         try
         {
+            using var connection = CreateConnection();
+            connection.Open();
+
             using var command = new NpgsqlCommand(sql, connection);
-            
-            // Определяем тип запроса
-            if (sql.Trim().ToUpper().StartsWith("SELECT"))
+
+            if (sql.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
             {
-                return ExecuteQuery(command);
+                return ExecuteQueryAsText(command);
             }
             else
             {
-                return ExecuteNonQuery(command);
+                return ExecuteNonQueryAsText(command);
             }
         }
         catch (Exception ex)
         {
             return $"Ошибка выполнения запроса: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// Выполняет SELECT и возвращает данные в виде текстовой таблицы.
+    /// </summary>
+    private string ExecuteQueryAsText(NpgsqlCommand command)
+    {
+        using var reader = command.ExecuteReader();
+
+        if (!reader.HasRows)
+            return "Нет данных.";
+
+        var sb = new StringBuilder();
+
+        // Заголовки колонок
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            if (i > 0) sb.Append(" | ");
+            sb.Append(reader.GetName(i));
+        }
+        sb.AppendLine();
+
+        // Данные
+        while (reader.Read())
+        {
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                if (i > 0) sb.Append(" | ");
+                sb.Append(reader.IsDBNull(i) ? "NULL" : reader.GetValue(i)?.ToString());
+            }
+            sb.AppendLine();
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Выполняет не-SELECT запрос (INSERT/UPDATE/DELETE) и
+    /// возвращает количество затронутых строк.
+    /// </summary>
+    private string ExecuteNonQueryAsText(NpgsqlCommand command)
+    {
+        int affected = command.ExecuteNonQuery();
+        return $"Затронуто строк: {affected}";
+    }
+
+    // ==========================
+    // Новый API для JSON
+    // ==========================
+
+    /// <summary>
+    /// Выполняет SELECT-запрос и возвращает результат в формате JSON (массив объектов).
+    /// Используется сервером для API /api/users, /api/events и т.п.
+    /// </summary>
+    /// <param name="sql">SELECT-запрос</param>
+    /// <returns>JSON-строка</returns>
+    public string ExecuteSelectToJson(string sql)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+            throw new ArgumentException("SQL-запрос не может быть пустым.", nameof(sql));
+
+        using var connection = CreateConnection();
+        connection.Open();
+
+        using var command = new NpgsqlCommand(sql, connection);
+        return ExecuteReaderToJson(command);
+    }
+
+    /// <summary>
+    /// Выполняет команду и конвертирует результат в JSON.
+    /// Все строки превращаются в список словарей.
+    /// </summary>
+    private string ExecuteReaderToJson(NpgsqlCommand command)
+    {
+        using var reader = command.ExecuteReader();
+
+        var rows = new List<Dictionary<string, object?>>();
+
+        while (reader.Read())
+        {
+            var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                object? value = reader.IsDBNull(i) ? null : reader.GetValue(i);
+
+                // Имя поля берём из БД, но приводим к camelCase
+                string columnName = reader.GetName(i);
+                string jsonName = ToCamelCase(columnName);
+
+                row[jsonName] = value;
+            }
+
+            rows.Add(row);
+        }
+
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = false
+        };
+
+        return JsonSerializer.Serialize(rows, options);
+    }
+
+    // ==========================
+    // Вспомогательные методы
+    // ==========================
+
+    /// <summary>
+    /// Преобразует имя поля БД в формат camelCase.
+    /// Пример: "user_id" -> "userId", "FullName" -> "fullName".
+    /// </summary>
+    private static string ToCamelCase(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return name;
+
+        // snake_case -> camelCase
+        if (name.Contains("_"))
+        {
+            var parts = name.Split('_', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0)
+                return name.ToLowerInvariant();
+
+            for (int i = 0; i < parts.Length; i++)
+            {
+                parts[i] = parts[i].ToLowerInvariant();
+                if (i > 0 && parts[i].Length > 0)
+                {
+                    parts[i] = char.ToUpperInvariant(parts[i][0]) + parts[i][1..];
+                }
+            }
+
+            return string.Join(string.Empty, parts);
+        }
+
+        // Просто делаем первую букву строчной, если была заглавная
+        if (char.IsUpper(name[0]))
+        {
+            return char.ToLowerInvariant(name[0]) + name[1..];
+        }
+
+        return name;
     }
 }

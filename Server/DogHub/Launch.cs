@@ -2,34 +2,44 @@
 
 public class Launch
 {
-    // Сечас конфиг задается в виде строки
-    private const string connectionConfig = "Host=localhost;Port=5432;Username=postgres;Password=lock;Database=doghub_db";
+    // Сейчас конфиг задается в виде строки
+    private const string connectionConfig =
+        "Host=localhost;Port=5432;Username=postgres;Password=tychaaa;Database=doghub_db";
     private const string pathToSQLCommands = "./Assets/SQLCommands.json";
-    
+
     /// <summary>
-    /// Точка входа в программу
+    /// Точка входа в программу.
+    /// Поднимает HTTP-сервер и больше ничего не делает.
     /// </summary>
-    /// <param name="args">В качестве параметров принимает адрес файла конфигурации</param>
-    static public void Main(string [] args)
+    /// <param name="args">В качестве параметров принимает адрес файла конфигурации (пока не используется)</param>
+    public static void Main(string[] args)
     {
-        // TODO::Чтение и парсинг файла конфигурации
-        // Например для передачи порта открытия сервера, имени БД для подключения
-        // логина и пароля пользователя БД и тд. 
+        // TODO: Чтение и парсинг файла конфигурации
+        // Например, для передачи порта открытия сервера, имени БД,
+        // логина и пароля пользователя БД и т.д.
 
+        // Инициализация работы с БД
         DataBaseModel dataBase = new DataBaseModel(connectionConfig);
+        if (dataBase == null)
+        {
+            throw new InvalidOperationException("Failed to initialize database connection");
+        }
 
-        SQLCommandManager manager = new SQLCommandManager(pathToSQLCommands);
-        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetUsers)));
-        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetEvents)));
-        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetPrograms)));
-        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetPeopleEvents)));
-        Console.WriteLine(dataBase.ExecuteSQL(manager.GetCommand(SQLCommandManager.GetChiped)));
+        // Загрузка SQL-команд из JSON
+        SQLCommandManager sqlCM = new SQLCommandManager(pathToSQLCommands);
+        if (sqlCM == null) 
+        {
+            throw new InvalidOperationException("Failed to read sql queries");
+        }
 
-        Server server = new Server(dataBase, manager);
+        // Запуск HTTP-сервера.
+        // Конструктор Server содержит бесконечный цикл AcceptTcpClient,
+        // поэтому Main не завершится, пока работает сервер.
+        new Server(dataBase, sqlCM);
     }
 
-    static public int Add(int a, int b)
+    public static int Add(int a, int b)
     {
         return a + b;
-    } 
+    }
 }
