@@ -5,121 +5,231 @@ using System.Text;
 using System.Threading;
 
 /// <summary>
-/// Сервер прослушивает порт 5055 на подключения и выводит эхо в консоль
+/// Простой HTTP-сервер для DogHub.
+/// Слушает порт 5055 и отдаёт JSON-API для фронтенда.
 /// </summary>
 class Server
 {
     private const int Port = 5055;
-    
+
     public DataBaseModel dbModel { get; set; }
     public SQLCommandManager sqlCM { get; set; }
-    
-    /// <summary>
-    /// Открывает сервер и запускает бесконечный цикл по прослушиванию порта
-    /// </summary>
+
+    private readonly TcpListener listener;
+    private bool isRunning;
+
     public Server(DataBaseModel dbModel, SQLCommandManager sqlCM)
     {
+        if (dbModel == null) throw new ArgumentNullException("dbModel");
+        if (sqlCM == null) throw new ArgumentNullException("sqlCM");
+
         this.dbModel = dbModel;
         this.sqlCM = sqlCM;
 
-        TcpListener? listener = null;
+        listener = new TcpListener(IPAddress.Any, Port);
+        listener.Start();
+        isRunning = true;
+
+        Console.WriteLine("HTTP сервер запущен на http://localhost:" + Port + "/api");
+
+        // Запускаем отдельный поток, который принимает подключения
+        Thread thread = new Thread(ListenLoop);
+        thread.IsBackground = true;
+        thread.Start();
+    }
+
+    /// <summary>
+    /// Основной цикл ожидания клиентов.
+    /// </summary>
+    private void ListenLoop()
+    {
         try
         {
-            listener = new TcpListener(IPAddress.Any, Port);
-            listener.Start();
-            Console.WriteLine($"Эхо-сервер запущен на порту {Port}...");
-            
-            while (true)
+            while (isRunning)
             {
                 TcpClient client = listener.AcceptTcpClient();
-                Console.WriteLine($"Подключен клиент: {client.Client.RemoteEndPoint}");
-                
-                Thread clientThread = new Thread(() => HandleClient(client));
-                clientThread.Start();
+                Console.WriteLine("Клиент подключен: " + client.Client.RemoteEndPoint);
+
+                // Обработку клиента отдаём в пул потоков
+                ThreadPool.QueueUserWorkItem(HandleClient, client);
             }
+        }
+        catch (SocketException ex)
+        {
+            Console.WriteLine("Ошибка сокета: " + ex.Message);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка: {ex.Message}");
+            Console.WriteLine("Ошибка сервера: " + ex.Message);
         }
         finally
         {
-            listener?.Stop();
+            listener.Stop();
         }
     }
-    
+
     /// <summary>
-    /// Метод обработки подключений клиентов
+    /// Обработка одного клиента: читаем HTTP-запрос и отправляем ответ.
     /// </summary>
-    /// <param name="obj">Параметр для передачи данных в поток</param>
-    private void HandleClient(object obj)
+    private void HandleClient(object state)
     {
-        TcpClient client = (TcpClient)obj;
-        NetworkStream? stream = null;
-        
-        // TODO::Выделить блок обработки клиента в отдельный класс
-        // TODO::Зациклить подключение пока клиент не разорвет его или
-        // не ответит на ping-pong запрос по таймауту
+        TcpClient client = state as TcpClient;
+        if (client == null)
+        {
+            return;
+        }
+
+        NetworkStream stream = null;
+
         try
         {
             stream = client.GetStream();
-            byte[] buffer = new byte[1024];
-            int bytesRead;
 
-            // Читаем весь запрос
+            // Чтение HTTP-запроса
+            byte[] buffer = new byte[8192];
+            int bytesRead;
             StringBuilder requestBuilder = new StringBuilder();
-            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+
+            do
             {
-                string chunk = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                requestBuilder.Append(chunk);
-                
-                // Проверяем, закончился ли запрос (пустая строка после заголовков)
-                if (chunk.Contains("\r\n\r\n"))
-                {
-                    break;
-                }
+                bytesRead = stream.Read(buffer, 0, buffer.Length);
+                if (bytesRead <= 0) break;
+
+                requestBuilder.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
+            }
+            while (stream.DataAvailable);
+
+            string requestText = requestBuilder.ToString();
+
+            if (string.IsNullOrWhiteSpace(requestText))
+            {
+                WriteResponse(stream, 400, "Bad Request", "text/plain; charset=utf-8", "Empty request");
+                return;
             }
 
-            string httpRequest = requestBuilder.ToString();
-            Console.WriteLine($"Получен запрос: {httpRequest}");
-            
-            // Парсим запрос
-            string requestedData = HttpRequestParser.GetParameter(httpRequest, "data");
-            string response;
-            if (!string.IsNullOrEmpty(requestedData))
+            Console.WriteLine("===== HTTP REQUEST =====");
+            Console.WriteLine(requestText);
+            Console.WriteLine("========================");
+
+            string[] lines = requestText.Split(new[] { "\r\n" }, StringSplitOptions.None);
+            if (lines.Length == 0)
             {
-                response = $"Запрошены данные: {requestedData}\r\n";
-                response += dbModel.ExecuteSQL(sqlCM.GetCommand(requestedData));
+                WriteResponse(stream, 400, "Bad Request", "text/plain; charset=utf-8", "Invalid request");
+                return;
+            }
+
+            string[] requestLineParts = lines[0].Split(' ');
+            if (requestLineParts.Length < 2)
+            {
+                WriteResponse(stream, 400, "Bad Request", "text/plain; charset=utf-8", "Cannot parse request line");
+                return;
+            }
+
+            string method = requestLineParts[0];
+            string rawUrl = requestLineParts[1];
+
+            if (!string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase))
+            {
+                WriteResponse(stream, 405, "Method Not Allowed", "text/plain; charset=utf-8", "Only GET is supported");
+                return;
+            }
+
+            // Парсим путь
+            Uri uri = new Uri("http://localhost" + rawUrl);
+            string path = uri.AbsolutePath;
+
+            string body;
+            string contentType = "application/json; charset=utf-8";
+
+            // Роутинг API
+            if (path == "/")
+            {
+                // Простейший ping-эндпоинт
+                contentType = "text/plain; charset=utf-8";
+                body = "DogHub API is running. Use /api/users, /api/events, /api/programs, /api/people-trainings, /api/chipped-dogs";
+            }
+            else if (path == "/api/users")
+            {
+                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetUsers));
+            }
+            else if (path == "/api/events")
+            {
+                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetEvents));
+            }
+            else if (path == "/api/programs")
+            {
+                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetPrograms));
+            }
+            else if (path == "/api/people-trainings")
+            {
+                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetPeopleEvents));
+            }
+            else if (path == "/api/chipped-dogs")
+            {
+                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetChiped));
             }
             else
             {
-                response = "Параметр 'data' не указан в запросе\r\n";
+                WriteResponse(stream, 404, "Not Found", "text/plain; charset=utf-8", "Endpoint not found");
+                return;
             }
 
-            // Формируем HTTP ответ
-            string httpResponse = $"HTTP/1.1 200 OK\r\n" +
-                                $"Content-Type: text/plain; charset=utf-8\r\n" +
-                                $"Content-Length: {Encoding.UTF8.GetByteCount(response)}\r\n" +
-                                $"Connection: close\r\n" +
-                                $"\r\n" +
-                                $"{response}\r\n\r\n";
-            
-            byte[] responseBytes = Encoding.UTF8.GetBytes(httpResponse);
-            stream.Write(responseBytes, 0, responseBytes.Length);
-
+            WriteResponse(stream, 200, "OK", contentType, body);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка при работе с клиентом: {ex.Message}");
+            Console.WriteLine("Ошибка при работе с клиентом: " + ex.Message);
+            if (stream != null)
+            {
+                try
+                {
+                    WriteResponse(stream, 500, "Internal Server Error", "text/plain; charset=utf-8", "Server error");
+                }
+                catch
+                {
+                    // игнорируем ошибки при отправке 500
+                }
+            }
         }
         finally
         {
-            if (client != null)
+            try
             {
-                Console.WriteLine($"Клиент {client.Client.RemoteEndPoint} отключен.");
+                Console.WriteLine("Клиент " + client.Client.RemoteEndPoint + " отключен.");
+                if (stream != null)
+                {
+                    stream.Close();
+                }
                 client.Close();
             }
-            stream?.Close();
+            catch
+            {
+                // игнорируем
+            }
         }
+    }
+
+    /// <summary>
+    /// Формирует и отправляет HTTP-ответ.
+    /// </summary>
+    private void WriteResponse(NetworkStream stream, int statusCode, string reasonPhrase, string contentType, string body)
+    {
+        if (body == null) body = string.Empty;
+
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
+
+        StringBuilder headers = new StringBuilder();
+        headers.AppendLine("HTTP/1.1 " + statusCode + " " + reasonPhrase);
+        headers.AppendLine("Date: " + DateTime.UtcNow.ToString("R"));
+        headers.AppendLine("Content-Type: " + contentType);
+        headers.AppendLine("Content-Length: " + bodyBytes.Length);
+        headers.AppendLine("Connection: close");
+        headers.AppendLine("Access-Control-Allow-Origin: *");
+        headers.AppendLine();
+
+        byte[] headerBytes = Encoding.ASCII.GetBytes(headers.ToString());
+
+        stream.Write(headerBytes, 0, headerBytes.Length);
+        stream.Write(bodyBytes, 0, bodyBytes.Length);
     }
 }
