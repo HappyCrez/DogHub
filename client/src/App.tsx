@@ -3,11 +3,13 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+
 import Home from "./pages/Home";
+import Members from "./pages/Members";
 
 export default function App() {
     const location = useLocation();
-    const reduceMotion = useReducedMotion();
+    const reduce = useReducedMotion();
 
     return (
         <div className="flex min-h-screen flex-col">
@@ -21,7 +23,7 @@ export default function App() {
                         opacity: 1,
                         y: 0,
                         transition: {
-                            duration: reduceMotion ? 0 : 0.25,
+                            duration: reduce ? 0 : 0.25,
                             ease: "easeOut",
                         },
                     }}
@@ -29,7 +31,7 @@ export default function App() {
                         opacity: 0,
                         y: -8,
                         transition: {
-                            duration: reduceMotion ? 0 : 0.15,
+                            duration: reduce ? 0 : 0.15,
                             ease: "easeIn",
                         },
                     }}
@@ -37,12 +39,9 @@ export default function App() {
                 >
                     <Routes location={location}>
                         <Route path="/" element={<Home />} />
-
-                        {/* Остальные страницы добавим позже:
-              <Route path="/dogs" element={<Dogs />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/members" element={<Members />} />
-            */}
+                        <Route path="/members" element={<Members />} />
+                        {/* опционально: 404 */}
+                        {/* <Route path="*" element={<div>Страница не найдена</div>} /> */}
                     </Routes>
                 </motion.main>
             </AnimatePresence>

@@ -60,3 +60,33 @@ export function getDogs(): Promise<ApiDog[]> {
 export function getChippedDogs(): Promise<ApiDog[]> {
     return getJson<ApiDog[]>("/api/chipped-dogs");
 }
+
+// ===== Участники + их собаки =====
+
+export interface ApiUserWithDogRow {
+    userId: number;
+    fullName: string;
+    phone: string | null;
+    email: string | null;
+    city: string | null;
+    avatar: string | null;
+    ownerBio: string | null;
+    joinDate: string | null;
+    membershipEndDate: string | null;
+    role: string;
+
+    // данные собаки (могут быть null, если у владельца пока нет собак в БД)
+    dogId: number | null;
+    dogName: string | null;
+    breed: string | null;
+    sex: "M" | "F" | null;
+    birthDate: string | null;
+    chipNumber: string | null;
+    dogPhoto: string | null;
+    dogTags: string[] | null;
+    dogBio: string | null;
+}
+
+export function getUsers(): Promise<ApiUserWithDogRow[]> {
+    return getJson<ApiUserWithDogRow[]>("/api/users");
+}
