@@ -11,11 +11,11 @@ public class AppConfig
 {
     private const string envPath = "./Assets/.env";
 
-    public string DbHost { get; init; } = "localhost";
-    public string DbPort { get; init; } = "5432";
-    public string DbUser { get; init; } = "postgres";
+    public string DbHost { get; init; } = "";
+    public string DbPort { get; init; } = "";
+    public string DbUser { get; init; } = "";
     public string DbPassword { get; init; } = "";
-    public string DbName { get; init; } = "doghub_db";
+    public string DbName { get; init; } = "";
 
     /// <summary>
     /// Создаёт экземпляр конфигурации, загружая

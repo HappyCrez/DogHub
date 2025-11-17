@@ -119,13 +119,13 @@ class Server
                 WriteResponse(stream, 405, "Method Not Allowed", "text/plain; charset=utf-8", "Only GET is supported");
                 return;
             }
-            
+
             string[] uri = requestLineParts[1].Split('/').Skip(1).ToArray();
             if (uri.Length < 2)
             {
                 WriteResponse(stream, 200, "OK",
                     "text/plain; charset=utf-8",
-                    "DogHub API is running. Use /api/users, /api/events, /api/programs, /api/people-trainings, /api/chipped-dogs");
+                    "DogHub API is running. Use /api/users, /api/events, /api/programs, /api/people-trainings, /api/dogs, /api/chipped-dogs");
             }
             else
             {

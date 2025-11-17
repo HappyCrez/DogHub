@@ -38,6 +38,9 @@ CREATE TABLE "users" (
   "full_name" varchar(200) NOT NULL,
   "phone" varchar(50),
   "email" varchar(150) UNIQUE,
+  "city" varchar(120),
+  "avatar" text,
+  "bio" text,
   "join_date" date,
   "membership_end_date" date,
   "role" varchar(40) NOT NULL
