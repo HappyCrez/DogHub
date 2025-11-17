@@ -1,10 +1,7 @@
-﻿namespace DogHub;
+namespace DogHub;
 
 public class Launch
 {
-    // Сейчас конфиг задается в виде строки
-    private const string connectionConfig =
-        "Host=localhost;Port=5432;Username=postgres;Password=tychaaa;Database=doghub_db";
     private const string pathToSQLCommands = "./Assets/SQLCommands.json";
 
     /// <summary>
@@ -14,9 +11,9 @@ public class Launch
     /// <param name="args">В качестве параметров принимает адрес файла конфигурации (пока не используется)</param>
     public static void Main(string[] args)
     {
-        // TODO: Чтение и парсинг файла конфигурации
-        // Например, для передачи порта открытия сервера, имени БД,
-        // логина и пароля пользователя БД и т.д.
+        // Загружаем конфиг из .env и собираем строку подключения к БД
+        var config = AppConfig.FromEnv();
+        var connectionConfig = config.BuildConnectionString();
 
         // Инициализация работы с БД
         DataBaseModel dataBase = new DataBaseModel(connectionConfig);

@@ -7,13 +7,7 @@ using System.Text.Json;
 class SQLCommandManager
 {
     private JsonElement jsonData;
-
-    public static readonly string GetUsers = "get_users";
-    public static readonly string GetEvents = "get_events";
-    public static readonly string GetPrograms = "get_programs";
-    public static readonly string GetPeopleEvents = "get_people_events";
-    public static readonly string GetChiped = "get_chiped";
-    public static readonly string GetDogs = "get_dogs";
+    
     // TODO::РЕАЛИЗОВАТЬ 6-ой запрос, он требует дополнительных данных для запроса
 
     /// <summary>
@@ -42,6 +36,13 @@ class SQLCommandManager
 
     public string GetCommand(string commandName)
     {
-        return jsonData.GetProperty(commandName).GetString() ?? string.Empty;
+        try
+        {
+            return jsonData.GetProperty(commandName).GetString() ?? string.Empty;
+        }
+        catch (Exception)
+        {
+            return string.Empty;
+        }
     }
 }

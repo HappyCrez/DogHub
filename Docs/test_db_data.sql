@@ -32,10 +32,10 @@ INSERT INTO "service_types" ("name") VALUES
 
 -- Вставляем тестовые данные в таблицу dog_services
 INSERT INTO "dog_services" ("service_type_id", "dog_id", "requested_at", "performed_at", "price", "status", "service_name") VALUES
-(1, 1, '2024-03-01 10:00:00', '2024-03-01 11:30:00', 1500.00, 'DONE', 'Стрижка лабрадора'),
-(2, 2, '2024-03-02 14:00:00', '2024-03-02 14:30:00', 800.00, 'DONE', 'Ежегодная вакцинация'),
-(4, 3, '2024-03-03 09:00:00', NULL, 500.00, 'SCHEDULED', 'Профилактический осмотр'),
-(3, 1, '2024-03-04 16:00:00', NULL, 1200.00, 'REQUESTED', 'Чистка зубов');
+(1, 1, '2025-12-01 10:00:00', NULL, 1500.00, 'DONE', 'Стрижка лабрадора'),
+(2, 2, '2025-12-02 14:00:00', NULL, 800.00, 'DONE', 'Ежегодная вакцинация'),
+(4, 3, '2025-12-03 09:00:00', NULL, 500.00, 'SCHEDULED', 'Профилактический осмотр'),
+(3, 1, '2025-12-04 16:00:00', NULL, 1200.00, 'REQUESTED', 'Чистка зубов');
 
 -- Вставляем тестовые данные в таблицу programs
 INSERT INTO "programs" ("title", "type", "price", "description") VALUES
@@ -66,10 +66,10 @@ INSERT INTO "events" ("title", "category", "status", "start_at", "end_at", "venu
 
 -- Вставляем тестовые данные в таблицу event_registrations
 INSERT INTO "event_registrations" ("dog_id", "event_id", "registered_at") VALUES
-(1, 1, '2024-03-08 09:30:00'),
-(2, 1, '2024-03-08 10:15:00'),
-(3, 2, '2024-03-09 14:00:00'),
-(4, 3, '2024-02-10 11:20:00');
+(1, 1, '2025-11-08 09:30:00'),
+(2, 1, '2025-11-08 10:15:00'),
+(3, 2, '2025-11-09 14:00:00'),
+(4, 3, '2025-11-10 11:20:00');
 
 -- Вставляем тестовые данные в таблицу payment_types
 INSERT INTO "payment_types" ("name") VALUES
