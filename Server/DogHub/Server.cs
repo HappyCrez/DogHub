@@ -20,7 +20,7 @@ class Server
     {
         this.dbModel = dbModel;
         this.sqlCM = sqlCM;
-        
+
         TcpListener? listener = null;
         try
         {
@@ -138,7 +138,7 @@ class Server
             {
                 // Простой ping-эндпоинт
                 contentType = "text/plain; charset=utf-8";
-                body = "DogHub API is running. Use /api/users, /api/events, /api/programs, /api/people-trainings, /api/chipped-dogs";
+                body = "DogHub API is running. Use /api/users, /api/dogs, /api/chipped-dogs, /api/events, /api/programs, /api/people-trainings";
             }
             else if (path == "/api/users")
             {
@@ -155,6 +155,10 @@ class Server
             else if (path == "/api/people-trainings")
             {
                 body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetPeopleEvents));
+            }
+            else if (path == "/api/dogs")
+            {
+                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetDogs));
             }
             else if (path == "/api/chipped-dogs")
             {
