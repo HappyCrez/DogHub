@@ -1,8 +1,19 @@
 {
-    "get_users": "SELECT u.id AS user_id, u.full_name, u.phone, u.email, u.join_date, u.membership_end_date, u.role, d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.tags, d.bio FROM users u LEFT JOIN dogs d ON u.id = d.user_id WHERE u.role = 'владелец' ORDER BY u.full_name, d.name;",
-    "get_events": "SELECT id, title, category, status, start_at, end_at, venue, price, description FROM events WHERE start_at > CURRENT_TIMESTAMP ORDER BY start_at;",
-    "get_programs": "SELECT p.id, p.title, p.type, p.price, p.description, COUNT(pr.dog_id) AS registered_dogs_count FROM programs p LEFT JOIN program_registrations pr ON p.id = pr.program_id GROUP BY p.id, p.title, p.type, p.price, p.description ORDER BY p.type, p.title;",
-    "get_people_events": "SELECT id, title, category, status, start_at, end_at, venue, price, description FROM events WHERE category = 'Образование' AND end_at <= CURRENT_TIMESTAMP ORDER BY start_at DESC;",
-    "get_chiped": "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dogs d JOIN users u ON d.user_id = u.id ORDER BY u.full_name, d.name;",
-    "get_dogs": "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.tags, d.bio, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dogs d JOIN users u ON d.user_id = u.id ORDER BY u.full_name, d.name;"
+    "users":
+    "SELECT u.id AS user_id, u.full_name, u.phone, u.email, u.join_date, u.membership_end_date, u.role, d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number FROM users u LEFT JOIN dogs d ON u.id = d.user_id WHERE u.role = 'владелец' ORDER BY u.full_name, d.name;"
+    ,
+    "events":
+    "SELECT id, title, category, status, start_at, end_at, venue, price, description FROM events WHERE start_at > CURRENT_TIMESTAMP ORDER BY start_at;"
+    ,
+    "programs":
+    "SELECT p.id, p.title, p.type, p.price, p.description, COUNT(pr.dog_id) AS registered_dogs_count FROM programs p LEFT JOIN program_registrations pr ON p.id = pr.program_id GROUP BY p.id, p.title, p.type, p.price, p.description ORDER BY p.type, p.title;"
+    ,
+    "people_events":
+    "SELECT id, title, category, status, start_at, end_at, venue, price, description FROM events WHERE category = 'Образование' AND end_at <= CURRENT_TIMESTAMP ORDER BY start_at DESC;"
+    ,
+    "chiped":
+    "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dogs d JOIN users u ON d.user_id = u.id ORDER BY u.full_name, d.name;"
+    ,
+    "dogs":
+    "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.tags, d.bio, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dogs d JOIN users u ON d.user_id = u.id ORDER BY u.full_name, d.name;"
 }
