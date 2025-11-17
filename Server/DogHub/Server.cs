@@ -20,7 +20,7 @@ class Server
     {
         this.dbModel = dbModel;
         this.sqlCM = sqlCM;
-        
+
         TcpListener? listener = null;
         try
         {
@@ -98,10 +98,6 @@ class Server
                 return;
             }
 
-            Console.WriteLine("===== HTTP REQUEST =====");
-            Console.WriteLine(requestText);
-            Console.WriteLine("========================");
-
             string[] lines = requestText.Split(new[] { "\r\n" }, StringSplitOptions.None);
             if (lines.Length == 0)
             {
@@ -118,55 +114,35 @@ class Server
             }
 
             string method = requestLineParts[0];
-            string rawUrl = requestLineParts[1];
-
             if (!string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase))
             {
                 WriteResponse(stream, 405, "Method Not Allowed", "text/plain; charset=utf-8", "Only GET is supported");
                 return;
             }
-
-            // Работаем только с путями, без старого параметра data
-            Uri uri = new Uri("http://localhost" + rawUrl);
-            string path = uri.AbsolutePath;
-
-            string body;
-            string contentType = "application/json; charset=utf-8";
-
-            // Роутинг API
-            if (path == "/")
+            
+            string[] uri = requestLineParts[1].Split('/').Skip(1).ToArray();
+            if (uri.Length < 2)
             {
-                // Простой ping-эндпоинт
-                contentType = "text/plain; charset=utf-8";
-                body = "DogHub API is running. Use /api/users, /api/events, /api/programs, /api/people-trainings, /api/chipped-dogs";
-            }
-            else if (path == "/api/users")
-            {
-                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetUsers));
-            }
-            else if (path == "/api/events")
-            {
-                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetEvents));
-            }
-            else if (path == "/api/programs")
-            {
-                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetPrograms));
-            }
-            else if (path == "/api/people-trainings")
-            {
-                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetPeopleEvents));
-            }
-            else if (path == "/api/chipped-dogs")
-            {
-                body = dbModel.ExecuteSelectToJson(sqlCM.GetCommand(SQLCommandManager.GetChiped));
+                WriteResponse(stream, 200, "OK",
+                    "text/plain; charset=utf-8",
+                    "DogHub API is running. Use /api/users, /api/events, /api/programs, /api/people-trainings, /api/chipped-dogs");
             }
             else
             {
-                WriteResponse(stream, 404, "Not Found", "text/plain; charset=utf-8", "Endpoint not found");
-                return;
+                string command = sqlCM.GetCommand(uri[1]);
+                if (command == String.Empty)
+                {
+                    WriteResponse(stream, 404, "Not Found",
+                        "text/plain; charset=utf-8",
+                        "Endpoint not found");
+                }
+                else
+                {
+                    WriteResponse(stream, 200, "OK",
+                        "application/json; charset=utf-8",
+                        dbModel.ExecuteSelectToJson(command));
+                }
             }
-
-            WriteResponse(stream, 200, "OK", contentType, body);
         }
         catch (Exception ex)
         {
