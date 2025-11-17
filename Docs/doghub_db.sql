@@ -59,7 +59,10 @@ CREATE TABLE "dogs" (
   "breed" varchar(120) NOT NULL,
   "sex" sex_enum NOT NULL,
   "birth_date" date,
-  "chip_number" varchar(64) UNIQUE
+  "chip_number" varchar(64) UNIQUE,
+  "photo" text,
+  "tags" text[],
+  "bio" text
 );
 
 CREATE TABLE "service_types" (
