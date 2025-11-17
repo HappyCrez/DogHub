@@ -1,9 +1,3 @@
-CREATE DATABASE doghub_db;
-
--- Connect to db from psql shell env
--- Comment to use script in pgAdmin 
-\c doghub_db;
-
 CREATE TYPE "sex_enum" AS ENUM (
   'M',
   'F'

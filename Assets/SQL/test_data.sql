@@ -1,7 +1,3 @@
--- Connect to db from psql shell env
--- Comment to use script in pgAdmin
-\c doghub_db;
-
 -- Вставляем тестовые данные в таблицу users
 INSERT INTO "users" ("full_name", "phone", "email", "join_date", "membership_end_date", "role") VALUES
 ('Иванов Алексей Петрович', '+7-911-123-45-67', 'alexey.ivanov@mail.ru', '2024-01-15', '2024-12-15', 'владелец'),
