@@ -140,7 +140,7 @@ class Server
                 {
                     WriteResponse(stream, 200, "OK",
                         "application/json; charset=utf-8",
-                        dbModel.ExecuteSQL(sqlCommand));
+                        dbModel.ExecuteSQL(sqlCommand, uri[2..]));
                 }
             }
         }
