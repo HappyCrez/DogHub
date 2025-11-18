@@ -17,6 +17,19 @@ class DataBaseModel
     private readonly string connectionString;
 
     /// <summary>
+    /// Создаёт новое подключение к БД.
+    /// </summary>
+    private NpgsqlConnection CreateConnection()
+    {
+        return new NpgsqlConnection(connectionString);
+    }
+
+    private void UpdateSQL(string sql, params string[] sqlParams)
+    {
+        Console.WriteLine(string.Join("",sqlParams));
+    }
+
+    /// <summary>
     /// Создаёт модель БД на основе строки подключения.
     /// Фактическое подключение создаётся под каждую операцию.
     /// </summary>
@@ -27,16 +40,7 @@ class DataBaseModel
     }
 
     /// <summary>
-    /// Создаёт новое подключение к БД.
-    /// </summary>
-    private NpgsqlConnection CreateConnection()
-    {
-        return new NpgsqlConnection(connectionString);
-    }
-
-    /// <summary>
-    /// Пробное подключение к БД (health-check).
-    /// Можно вызывать один раз при старте приложения.
+    /// Пробное подключение к БД
     /// </summary>
     public void Connect()
     {
@@ -46,14 +50,14 @@ class DataBaseModel
     }
 
     /// <summary>
-    /// Выполняет SQL-запрос и возвращает результат в виде текстовой строки.
-    /// Если запрос начинается с SELECT – возвращается табличка "колонки | данные".
-    /// Для остальных запросов возвращается количество затронутых строк.
-    /// Используется, например, в Launch.cs для отладки.
+    /// Выполняет SQL-запрос и возвращает результат в виде json
     /// </summary>
     /// <param name="sql">Произвольный SQL-запрос</param>
-    public string ExecuteSQL(string sql)
+    public string ExecuteSQL(string sql, params string[] sqlParams)
     {
+        // Подставляем параметры в запрос
+        UpdateSQL(sql, sqlParams);
+
         try
         {
             using var connection = CreateConnection();
@@ -75,13 +79,13 @@ class DataBaseModel
     }
 
     /// <summary>
-    /// Выполняет не-SELECT запрос (INSERT/UPDATE/DELETE) и
-    /// возвращает количество затронутых строк.
+    /// Выполняет не-SELECT запрос (INSERT/UPDATE/DELETE)
     /// </summary>
+    /// <returns>Возвращает количество затронутых строк</returns>
     private string ExecuteNonQuery(NpgsqlCommand command)
     {
         int affected = command.ExecuteNonQuery();
-        return $"Затронуто строк: {affected}";
+        return $"{{ result: \"Затронуто строк: {affected}\"}}";
     }
 
     /// <summary>
