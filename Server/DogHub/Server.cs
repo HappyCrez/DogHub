@@ -129,8 +129,8 @@ class Server
             }
             else
             {
-                string command = sqlCM.GetCommand(uri[1]);
-                if (command == String.Empty)
+                string sqlCommand = sqlCM.GetCommand(uri[1]);
+                if (sqlCommand == String.Empty)
                 {
                     WriteResponse(stream, 404, "Not Found",
                         "text/plain; charset=utf-8",
@@ -140,7 +140,7 @@ class Server
                 {
                     WriteResponse(stream, 200, "OK",
                         "application/json; charset=utf-8",
-                        dbModel.ExecuteSelectToJson(command));
+                        dbModel.ExecuteSQL(sqlCommand));
                 }
             }
         }

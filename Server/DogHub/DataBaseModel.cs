@@ -23,9 +23,6 @@ class DataBaseModel
     /// <param name="connectionString">Строка подключения к PostgreSQL</param>
     public DataBaseModel(string connectionString)
     {
-        if (string.IsNullOrWhiteSpace(connectionString))
-            throw new ArgumentException("Строка подключения не может быть пустой.", nameof(connectionString));
-
         this.connectionString = connectionString;
     }
 
@@ -48,10 +45,6 @@ class DataBaseModel
         Console.WriteLine("Подключен к PostgreSQL");
     }
 
-    // ==========================
-    // Старый API: ExecuteSQL
-    // ==========================
-
     /// <summary>
     /// Выполняет SQL-запрос и возвращает результат в виде текстовой строки.
     /// Если запрос начинается с SELECT – возвращается табличка "колонки | данные".
@@ -61,23 +54,18 @@ class DataBaseModel
     /// <param name="sql">Произвольный SQL-запрос</param>
     public string ExecuteSQL(string sql)
     {
-        if (string.IsNullOrWhiteSpace(sql))
-            return "Пустой SQL-запрос.";
-
         try
         {
             using var connection = CreateConnection();
             connection.Open();
-
             using var command = new NpgsqlCommand(sql, connection);
-
             if (sql.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
             {
-                return ExecuteQueryAsText(command);
+                return ExecuteQuery(command);
             }
             else
             {
-                return ExecuteNonQueryAsText(command);
+                return ExecuteNonQuery(command);
             }
         }
         catch (Exception ex)
@@ -87,79 +75,24 @@ class DataBaseModel
     }
 
     /// <summary>
-    /// Выполняет SELECT и возвращает данные в виде текстовой таблицы.
-    /// </summary>
-    private string ExecuteQueryAsText(NpgsqlCommand command)
-    {
-        using var reader = command.ExecuteReader();
-
-        if (!reader.HasRows)
-            return "Нет данных.";
-
-        var sb = new StringBuilder();
-
-        // Заголовки колонок
-        for (int i = 0; i < reader.FieldCount; i++)
-        {
-            if (i > 0) sb.Append(" | ");
-            sb.Append(reader.GetName(i));
-        }
-        sb.AppendLine();
-
-        // Данные
-        while (reader.Read())
-        {
-            for (int i = 0; i < reader.FieldCount; i++)
-            {
-                if (i > 0) sb.Append(" | ");
-                sb.Append(reader.IsDBNull(i) ? "NULL" : reader.GetValue(i)?.ToString());
-            }
-            sb.AppendLine();
-        }
-
-        return sb.ToString();
-    }
-
-    /// <summary>
     /// Выполняет не-SELECT запрос (INSERT/UPDATE/DELETE) и
     /// возвращает количество затронутых строк.
     /// </summary>
-    private string ExecuteNonQueryAsText(NpgsqlCommand command)
+    private string ExecuteNonQuery(NpgsqlCommand command)
     {
         int affected = command.ExecuteNonQuery();
         return $"Затронуто строк: {affected}";
-    }
-
-    // ==========================
-    // Новый API для JSON
-    // ==========================
-
-    /// <summary>
-    /// Выполняет SELECT-запрос и возвращает результат в формате JSON (массив объектов).
-    /// Используется сервером для API /api/users, /api/events и т.п.
-    /// </summary>
-    /// <param name="sql">SELECT-запрос</param>
-    /// <returns>JSON-строка</returns>
-    public string ExecuteSelectToJson(string sql)
-    {
-        if (string.IsNullOrWhiteSpace(sql))
-            throw new ArgumentException("SQL-запрос не может быть пустым.", nameof(sql));
-
-        using var connection = CreateConnection();
-        connection.Open();
-
-        using var command = new NpgsqlCommand(sql, connection);
-        return ExecuteReaderToJson(command);
     }
 
     /// <summary>
     /// Выполняет команду и конвертирует результат в JSON.
     /// Все строки превращаются в список словарей.
     /// </summary>
-    private string ExecuteReaderToJson(NpgsqlCommand command)
+    /// <param name="command">SELECT-команда</param>
+    /// <returns>JSON-строка</returns>
+    private string ExecuteQuery(NpgsqlCommand command)
     {
         using var reader = command.ExecuteReader();
-
         var rows = new List<Dictionary<string, object?>>();
 
         while (reader.Read())
@@ -184,29 +117,25 @@ class DataBaseModel
         {
             WriteIndented = false
         };
-
         return JsonSerializer.Serialize(rows, options);
     }
 
-    // ==========================
-    // Вспомогательные методы
-    // ==========================
-
     /// <summary>
-    /// Преобразует имя поля БД в формат camelCase.
+    /// Преобразует строку в формат camelCase.
     /// Пример: "user_id" -> "userId", "FullName" -> "fullName".
     /// </summary>
-    private static string ToCamelCase(string name)
+    /// <param name="str">Строка для преобразования</param>
+    /// <returns>JSON-строка</returns>
+    private static string ToCamelCase(string str)
     {
-        if (string.IsNullOrEmpty(name))
-            return name;
-
         // snake_case -> camelCase
-        if (name.Contains("_"))
+        if (str.Contains("_"))
         {
-            var parts = name.Split('_', StringSplitOptions.RemoveEmptyEntries);
+            var parts = str.Split('_', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
-                return name.ToLowerInvariant();
+            {
+                return str.ToLowerInvariant();
+            }
 
             for (int i = 0; i < parts.Length; i++)
             {
@@ -216,16 +145,14 @@ class DataBaseModel
                     parts[i] = char.ToUpperInvariant(parts[i][0]) + parts[i][1..];
                 }
             }
-
             return string.Join(string.Empty, parts);
         }
 
         // Просто делаем первую букву строчной, если была заглавная
-        if (char.IsUpper(name[0]))
+        if (str.Length > 0 && char.IsUpper(str[0]))
         {
-            return char.ToLowerInvariant(name[0]) + name[1..];
+            return char.ToLowerInvariant(str[0]) + str[1..];
         }
-
-        return name;
+        return str;
     }
 }

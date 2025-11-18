@@ -16,8 +16,6 @@ class SQLCommandManager
     /// <param name="filename">путь к json файлу с набором sql команд</param>
     /// <remarks>
     /// TODO::Если json указан неверно или не может быть обработан, тогда нужна логика как это будет разрешаться
-    /// + изначально проверить что все комманды записанные в публичных полях доступны, иначе может быть ситуация
-    /// когда сервер будет крашиться в runtime
     /// </remarks>
     public SQLCommandManager(string filename)
     {

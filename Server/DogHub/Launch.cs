@@ -17,10 +17,7 @@ public class Launch
 
         // Инициализация работы с БД
         DataBaseModel dataBase = new DataBaseModel(connectionConfig);
-        if (dataBase == null)
-        {
-            throw new InvalidOperationException("Failed to initialize database connection");
-        }
+        // TODO::Три попытки тестового соединения с БД
 
         // Загрузка SQL-команд из JSON
         SQLCommandManager sqlCM = new SQLCommandManager(pathToSQLCommands);
@@ -29,9 +26,7 @@ public class Launch
             throw new InvalidOperationException("Failed to read sql queries");
         }
 
-        // Запуск HTTP-сервера.
-        // Конструктор Server содержит бесконечный цикл AcceptTcpClient,
-        // поэтому Main не завершится, пока работает сервер.
+        // Запуск HTTP-сервера
         new Server(dataBase, sqlCM);
     }
 
