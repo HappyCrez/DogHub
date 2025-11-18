@@ -5,6 +5,9 @@
     "events":
     "SELECT id, title, category, status, start_at, end_at, venue, price, description FROM events ORDER BY start_at;"
     ,
+    "event":
+    "SELECT id, title, category, status, start_at, end_at, venue, price, description FROM events WHERE id=$$;"
+    ,
     "programs":
     "SELECT p.id, p.title, p.type, p.price, p.description, COUNT(pr.dog_id) AS registered_dogs_count FROM programs p LEFT JOIN program_registrations pr ON p.id = pr.program_id GROUP BY p.id, p.title, p.type, p.price, p.description ORDER BY p.type, p.title;"
     ,

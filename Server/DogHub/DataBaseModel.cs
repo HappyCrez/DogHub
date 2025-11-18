@@ -24,9 +24,46 @@ class DataBaseModel
         return new NpgsqlConnection(connectionString);
     }
 
-    private void UpdateSQL(string sql, params string[] sqlParams)
+    /// <summary>
+    /// Проходит по строке sql и ищет вхождение символа $$,
+    /// заменяя его на следующий переданный параметр 
+    /// </summary>
+    /// <param name="sql">Строка sql запроса</param>
+    /// <param name="sqlParams">Параметры для модификации sql запроса</param>
+    /// <returns>Возвращает модифицированный sql запрос</returns>
+    private string UpdateSQL(string sql, params string[] sqlParams)
     {
-        Console.WriteLine(string.Join("",sqlParams));
+        if (sqlParams == null || sqlParams.Length == 0)
+        {
+            return sql;
+        }
+
+        var result = new StringBuilder();
+        int paramIndex = 0;
+        
+        for (int i = 0; i < sql.Length; i++)
+        {
+            if (i < sql.Length - 1 && sql[i] == '$' && sql[i + 1] == '$')
+            {
+                if (paramIndex < sqlParams.Length)
+                {
+                    result.Append(sqlParams[paramIndex]);
+                    paramIndex++;
+                    i++; // Пропускаем следующий символ '$'
+                }
+                else
+                {
+                    // Если параметры закончились, оставляем "$$"
+                    result.Append("$$");
+                    i++; // Пропускаем следующий символ '$'
+                }
+            }
+            else
+            {
+                result.Append(sql[i]);
+            }
+        }
+        return result.ToString();
     }
 
     /// <summary>
@@ -50,13 +87,14 @@ class DataBaseModel
     }
 
     /// <summary>
-    /// Выполняет SQL-запрос и возвращает результат в виде json
+    /// Выполняет переданный SQL-запрос
     /// </summary>
     /// <param name="sql">Произвольный SQL-запрос</param>
+    /// <returns>Возвращает результат выполнения SQL в формате json</returns>
     public string ExecuteSQL(string sql, params string[] sqlParams)
     {
         // Подставляем параметры в запрос
-        UpdateSQL(sql, sqlParams);
+        sql = UpdateSQL(sql, sqlParams);
 
         try
         {
@@ -72,9 +110,9 @@ class DataBaseModel
                 return ExecuteNonQuery(command);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return $"Ошибка выполнения запроса: {ex.Message}";
+            return $"{{ \"error\": \"Ошибка выполнения запроса\"}}\r\n";
         }
     }
 
@@ -85,7 +123,7 @@ class DataBaseModel
     private string ExecuteNonQuery(NpgsqlCommand command)
     {
         int affected = command.ExecuteNonQuery();
-        return $"{{ result: \"Затронуто строк: {affected}\"}}";
+        return $"{{ \"result\": \"Затронуто строк: {affected}\"}}";
     }
 
     /// <summary>
