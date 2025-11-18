@@ -125,7 +125,7 @@ class Server
             {
                 WriteResponse(stream, 200, "OK",
                     "text/plain; charset=utf-8",
-                    "DogHub API is running. Use /api/users, /api/events, /api/programs, /api/people-trainings, /api/dogs, /api/chipped-dogs");
+                    "DogHub API is running. Use /api/users, /api/events, /api/programs, /api/people-events, /api/dogs, /api/chiped");
             }
             else
             {
