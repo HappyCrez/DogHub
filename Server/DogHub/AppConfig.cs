@@ -11,11 +11,28 @@ public class AppConfig
 {
     private const string envPath = "./Assets/.env";
 
-    public string DbHost { get; init; } = "";
-    public string DbPort { get; init; } = "";
-    public string DbUser { get; init; } = "";
-    public string DbPassword { get; init; } = "";
-    public string DbName { get; init; } = "";
+    public string DbHost { get; }
+    public string DbPort { get; }
+    public string DbUser { get; }
+    public string DbName { get; }
+    public string DbPassword { get; }
+
+    /// <summary>
+    /// Инициирует поля доступные только для чтения
+    /// </summary>
+    /// <param name="dbHost">Адрес подключения к БД</param>
+    /// <param name="dbPort">Порт подключения к БД</param>
+    /// <param name="dbUser">Имя пользователя для подключения</param>
+    /// <param name="dbName">Имя БД для подключения</param>
+    /// <param name="dbPassword">Пароль пользователя БД</param>
+    private AppConfig(string dbHost, string dbPort, string dbUser, string dbName, string dbPassword)
+    {
+        DbHost = dbHost;
+        DbPort = dbPort;
+        DbUser = dbUser;
+        DbName = dbName;
+        DbPassword = dbPassword;
+    }
 
     /// <summary>
     /// Создаёт экземпляр конфигурации, загружая
@@ -29,21 +46,14 @@ public class AppConfig
     {
         Env.Load(envPath);
 
-        return new AppConfig
-        {
-            DbHost = Environment.GetEnvironmentVariable("DB_HOST")
-                ?? "localhost",
-            DbPort = Environment.GetEnvironmentVariable("DB_PORT")
-                ?? "5432",
-            DbUser = Environment.GetEnvironmentVariable("DB_USER")
-                ?? "postgres",
-            DbPassword = Environment
-                .GetEnvironmentVariable("DB_PASSWORD")
-                ?? throw new InvalidOperationException(
-                    "DB_PASSWORD is not set"),
-            DbName = Environment.GetEnvironmentVariable("DB_NAME")
-                ?? "doghub_db"
-        };
+        string dbHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+        string dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
+        string dbUser = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
+        string dbName = Environment.GetEnvironmentVariable("DB_NAME") ?? "doghub_db";
+        string dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD") 
+            ?? throw new InvalidOperationException("DB_PASSWORD is not set");
+
+        return new AppConfig(dbHost, dbPort, dbUser, dbName, dbPassword);
     }
 
     /// <summary>
