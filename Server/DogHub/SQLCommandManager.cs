@@ -8,15 +8,10 @@ class SQLCommandManager
 {
     private JsonElement jsonData;
     
-    // TODO::РЕАЛИЗОВАТЬ 6-ой запрос, он требует дополнительных данных для запроса
-
     /// <summary>
     /// Инициализирует менеджера комманд по json файлу с набором комманд
     /// </summary>
     /// <param name="filename">путь к json файлу с набором sql команд</param>
-    /// <remarks>
-    /// TODO::Если json указан неверно или не может быть обработан, тогда нужна логика как это будет разрешаться
-    /// </remarks>
     public SQLCommandManager(string filename)
     {
         try
@@ -31,16 +26,21 @@ class SQLCommandManager
             throw; // Передаем исключение на уровень выше
         }
     }
-
+    
+    /// <summary>
+    /// Ищет в json файле маппинг по соответствующему имени команды
+    /// </summary>
+    /// <param name="commandName">Имя команды в файле json</param>
+    /// <returns>
+    /// Возвращает строку соответствующего sql запроса,
+    /// если такой запрос не был мапирован, то возвращает пустую строку
+    /// </returns>
     public string GetCommand(string commandName)
     {
-        try
+        if (jsonData.TryGetProperty(commandName, out JsonElement property))
         {
-            return jsonData.GetProperty(commandName).GetString() ?? string.Empty;
+            return property.GetString() ?? string.Empty;
         }
-        catch (Exception)
-        {
-            return string.Empty;
-        }
+        return string.Empty;
     }
 }
