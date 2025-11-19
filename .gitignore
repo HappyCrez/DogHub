@@ -3,3 +3,4 @@ bin/
 TestResults/
 *.env
 exec.sh
+exec.ps1
