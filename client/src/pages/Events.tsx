@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { getEvents, type ApiEventRow } from "../api/client";
 import EventCard from "../components/EventCard";
 
@@ -137,7 +138,9 @@ export default function Events() {
                         <div className="space-y-3">
                             <h2 className="text-lg font-semibold">Ближайшие</h2>
                             {upcoming.map((ev) => (
-                                <EventCard key={ev.id} ev={ev} />
+                                <Link key={ev.id} to={`/events/${ev.id}`} className="block">
+                                    <EventCard ev={ev} />
+                                </Link>
                             ))}
                         </div>
                     )}
@@ -146,7 +149,9 @@ export default function Events() {
                         <div className="space-y-3">
                             <h2 className="text-lg font-semibold">Прошедшие</h2>
                             {past.map((ev) => (
-                                <EventCard key={ev.id} ev={ev} />
+                                <Link key={ev.id} to={`/events/${ev.id}`} className="block">
+                                    <EventCard ev={ev} />
+                                </Link>
                             ))}
                         </div>
                     )}

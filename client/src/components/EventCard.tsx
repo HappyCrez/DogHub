@@ -6,6 +6,7 @@ function formatDate(iso: string) {
         weekday: "short",
         day: "2-digit",
         month: "long",
+        year: "numeric",      // ✅ добавили год
         hour: "2-digit",
         minute: "2-digit",
     });

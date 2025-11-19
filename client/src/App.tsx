@@ -7,6 +7,10 @@ import Dogs from "./pages/Dogs";
 import Events from "./pages/Events";
 import Members from "./pages/Members";
 import MemberProfile from "./pages/MemberProfile";
+import Training from "./pages/Training";
+import EventDetails from "./pages/EventDetails";
+import ProgramDetails from "./pages/ProgramDetails";
+import PeopleTrainingDetails from "./pages/PeopleTrainingDetails";
 
 export default function App() {
     const location = useLocation();
@@ -41,6 +45,10 @@ export default function App() {
                         <Route path="/" element={<Home />} />
                         <Route path="/dogs" element={<Dogs />} />
                         <Route path="/events" element={<Events />} />
+                        <Route path="/events/:id" element={<EventDetails />} />
+                        <Route path="/programs/:id" element={<ProgramDetails />} />
+                        <Route path="/training" element={<Training />} />
+                        <Route path="/trainings/:id" element={<PeopleTrainingDetails />} />
                         <Route path="/members" element={<Members />} />
                         <Route path="/members/:id" element={<MemberProfile />} />
                     </Routes>

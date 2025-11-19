@@ -27,6 +27,7 @@ export default function Footer() {
                             <li><Link to="/">Главная</Link></li>
                             <li><Link to="/dogs">Собаки</Link></li>
                             <li><Link to="/events">События</Link></li>
+                            <li><Link to="/training">Обучение</Link></li>
                             <li><Link to="/members">Участники</Link></li>
                         </ul>
                     </div>

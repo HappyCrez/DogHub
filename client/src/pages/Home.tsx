@@ -91,12 +91,12 @@ export default function Home() {
         const map = new Map<number, MemberSummary>();
 
         for (const row of userRows) {
-            if (!map.has(row.userId)) {
-                map.set(row.userId, {
-                    id: row.userId,
+            if (!map.has(row.memberId)) {
+                map.set(row.memberId, {
+                    id: row.memberId,
                     fullName: row.fullName,
                     city: row.city ?? null,
-                    avatar: row.avatar ?? null,
+                    avatar: row.avatarUrl ?? null,
                     joinDate: row.joinDate ?? null,
                 });
             }
@@ -282,27 +282,29 @@ export default function Home() {
                     {upcomingShort.length > 0 ? (
                         <ul className="space-y-3">
                             {upcomingShort.map((ev) => (
-                                <li
-                                    key={ev.id}
-                                    className="rounded-xl border border-gray-200 p-3"
-                                >
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="text-sm font-semibold">{ev.title}</span>
-                                        {ev.category && (
-                                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
-                        {ev.category}
-                      </span>
-                                        )}
-                                    </div>
-                                    <div className="mt-1 text-sm text-gray-600">
-                                        🗓️ {formatEventDate(ev.startAt)} • 📍 {ev.venue}
-                                    </div>
-                                    {ev.description && (
-                                        <div className="mt-1 text-sm text-gray-700">
-                                            {ev.description}
+                                <Link key={ev.id} to={`/events/${ev.id}`} className="block">
+                                    <li
+                                        key={ev.id}
+                                        className="rounded-xl border border-gray-200 p-3"
+                                    >
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-sm font-semibold">{ev.title}</span>
+                                            {ev.category && (
+                                                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
+                            {ev.category}
+                          </span>
+                                            )}
                                         </div>
-                                    )}
-                                </li>
+                                        <div className="mt-1 text-sm text-gray-600">
+                                            🗓️ {formatEventDate(ev.startAt)} • 📍 {ev.venue}
+                                        </div>
+                                        {ev.description && (
+                                            <div className="mt-1 text-sm text-gray-700">
+                                                {ev.description}
+                                            </div>
+                                        )}
+                                    </li>
+                                </Link>
                             ))}
                         </ul>
                     ) : (

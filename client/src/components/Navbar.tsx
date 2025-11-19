@@ -13,6 +13,7 @@ const navItems: NavItem[] = [
     { to: '/', label: 'Главная' },
     { to: '/dogs', label: 'Собаки' },
     { to: '/events', label: 'События' },
+    { to: "/training", label: "Обучение" },
     { to: '/members', label: 'Участники' },
 ];
 
