@@ -5,6 +5,7 @@ import {
     getEventDogs,
     type ApiEventRow,
     type ApiEventDogRow,
+    type ApiDog,             // ← добавили тип
 } from "../api/client";
 import EventCard from "../components/EventCard";
 import DogCard from "../components/DogCard";
@@ -106,14 +107,14 @@ export default function EventDetails() {
     }
 
     // маппинг ApiEventDogRow → ApiDog для использования существующего DogCard
-    const dogsForCards = dogs.map((d) => ({
+    const dogsForCards: ApiDog[] = dogs.map((d) => ({
         dogId: d.dogId,
         dogName: d.dogName,
         breed: d.breed,
         sex: d.sex,
         birthDate: d.birthDate ?? null,
         chipNumber: d.chipNumber ?? null,
-        photo: null,
+        photo: d.photo ?? null,          // ← тут теперь берём фото из БД
         tags: d.tags ?? null,
         bio: d.bio ?? null,
         ownerName: d.ownerFullName,
@@ -142,11 +143,11 @@ export default function EventDetails() {
                 <div className="mb-3 flex items-baseline justify-between gap-2">
                     <h2 className="text-lg font-semibold">Записанные собаки</h2>
                     <span className="text-xs text-gray-500">
-                        Найдено: {dogs.length}
+                        Найдено: {dogsForCards.length}
                     </span>
                 </div>
 
-                {dogs.length === 0 ? (
+                {dogsForCards.length === 0 ? (
                     <p className="text-gray-600">
                         На это событие пока никто не записан.
                     </p>

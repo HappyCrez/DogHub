@@ -126,7 +126,7 @@ export default function ProgramDetails() {
         sex: d.sex,
         birthDate: d.birthDate ?? null,
         chipNumber: d.chipNumber ?? null,
-        photo: null,
+        photo: d.photo ?? null,           // ← теперь берём фото
         tags: d.tags ?? null,
         bio: d.bio ?? null,
         ownerName: d.ownerFullName,
