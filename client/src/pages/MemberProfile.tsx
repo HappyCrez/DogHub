@@ -8,13 +8,13 @@ function groupUsers(rows: ApiUserWithDogRow[]): MemberWithDogs[] {
     const map = new Map<number, MemberWithDogs>();
 
     for (const row of rows) {
-        let member = map.get(row.userId);
+        let member = map.get(row.memberId);
         if (!member) {
             member = {
-                id: row.userId,
+                id: row.memberId,
                 fullName: row.fullName,
                 city: row.city,
-                avatar: row.avatar,
+                avatar: row.avatarUrl,
                 bio: row.ownerBio ?? undefined,
                 phone: row.phone,
                 email: row.email,
@@ -22,7 +22,7 @@ function groupUsers(rows: ApiUserWithDogRow[]): MemberWithDogs[] {
                 membershipEndDate: row.membershipEndDate ?? undefined,
                 dogs: [],
             };
-            map.set(row.userId, member);
+            map.set(row.memberId, member);
         }
 
         if (row.dogId !== null && row.dogName !== null) {

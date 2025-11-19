@@ -32,7 +32,13 @@ export function formatJoined(iso?: string | null) {
     return d.toLocaleDateString("ru-RU", { year: "numeric", month: "long" });
 }
 
-const MemberCard: FC<{ member: MemberWithDogs }> = ({ member }) => {
+interface MemberCardProps {
+    member: MemberWithDogs;
+    /** Показывать ли блок с собаками. По умолчанию — да. */
+    showDogs?: boolean;
+}
+
+const MemberCard: FC<MemberCardProps> = ({ member, showDogs = true }) => {
     const { id, fullName, city, avatar, bio, phone, email, joinDate, dogs } = member;
 
     return (
@@ -65,11 +71,11 @@ const MemberCard: FC<{ member: MemberWithDogs }> = ({ member }) => {
                             {phone && <span>📞 {phone}</span>}
                             {email && (
                                 <span>
-                  📧{" "}
+                                    📧{" "}
                                     <span className="underline decoration-dotted underline-offset-2 group-hover:no-underline">
-                    {email}
-                  </span>
-                </span>
+                                        {email}
+                                    </span>
+                                </span>
                             )}
                         </p>
                     )}
@@ -82,37 +88,41 @@ const MemberCard: FC<{ member: MemberWithDogs }> = ({ member }) => {
                 </div>
             </div>
 
-            {/* список собак: только имя + порода */}
-            <div className="mt-3">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">
-          Собаки
-        </span>
+            {/* список собак: только имя + порода (опционально) */}
+            {showDogs && (
+                <div className="mt-3">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                        Собаки
+                    </span>
 
-                {dogs.length > 0 ? (
-                    <ul className="mt-1 flex flex-wrap gap-1.5">
-                        {dogs.map((dog) => (
-                            <li
-                                key={dog.id}
-                                className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-[11px] text-gray-800"
-                            >
-                                {dog.name}
-                                {dog.breed ? ` — ${dog.breed}` : " — порода не указана"}
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="mt-1 text-[11px] text-gray-500">
-                        Пока нет собак в базе.
-                    </p>
-                )}
-            </div>
+                    {dogs.length > 0 ? (
+                        <ul className="mt-1 flex flex-wrap gap-1.5">
+                            {dogs.map((dog) => (
+                                <li
+                                    key={dog.id}
+                                    className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-[11px] text-gray-800"
+                                >
+                                    {dog.name}
+                                    {dog.breed
+                                        ? ` — ${dog.breed}`
+                                        : " — порода не указана"}
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="mt-1 text-[11px] text-gray-500">
+                            Пока нет собак в базе.
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* подвал карточки */}
             <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500">
                 <span>В клубе с {formatJoined(joinDate)}</span>
                 <span className="text-amber-700 group-hover:text-amber-900">
-          Профиль →
-        </span>
+                    Профиль →
+                </span>
             </div>
         </Link>
     );
