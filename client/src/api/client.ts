@@ -71,6 +71,7 @@ export interface ApiEventDogRow {
     sex: "M" | "F";
     birthDate?: string | null;
     chipNumber?: string | null;
+    photo?: string | null;
     ownerFullName: string;
     ownerCity: string | null;
     tags?: string[] | null;
@@ -132,6 +133,7 @@ export interface ApiProgramDogRow {
     sex: "M" | "F";
     birthDate?: string | null;
     chipNumber?: string | null;
+    photo?: string | null;
     ownerFullName: string;
     ownerCity: string | null;
     tags?: string[] | null;
