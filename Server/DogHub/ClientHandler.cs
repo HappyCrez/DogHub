@@ -55,7 +55,7 @@ class ClientHandler
         headers.AppendLine("Date: " + DateTime.UtcNow.ToString("R"));
         headers.AppendLine("Content-Type: " + contentType);
         headers.AppendLine("Content-Length: " + bodyBytes.Length);
-        headers.AppendLine("Connection: keep-alive");
+        headers.AppendLine("Connection: close"); // keep-alive
         headers.AppendLine("Access-Control-Allow-Origin: *");
         headers.AppendLine();
 
@@ -181,37 +181,9 @@ class ClientHandler
 
         try
         {
-            // 6 минут неактивности
-            // Но браузеры разрывают соединение через 1-2 минуты
-            int inactivityTimeout = 300;
-            lastAcivityTime = DateTime.Now; 
-            
-            // 5 секунд на ожидание получения следующего пакета данных
-            client.ReceiveTimeout = 5000;
-
-            // 5 секунд на подтверждение TCP отправки данных  
-            client.SendTimeout = 5000;
-
+            // Подготовка к реальной сессии на WebSocket
             stream = client.GetStream();
-            while (client.Connected)
-            {
-                if ((DateTime.Now - lastAcivityTime).TotalSeconds > inactivityTimeout)
-                {
-                    break;
-                }
-
-                HandleRequest(stream);
-                if (!stream.DataAvailable)
-                {
-                    // Проверка доступности клиента
-                    if (client.Client.Poll(1000, SelectMode.SelectRead) &&
-                        client.Available == 0)
-                    {
-                        break;
-                    }
-                    Thread.Sleep(200);
-                }
-            }
+            HandleRequest(stream);
         }
         catch (Exception ex)
         {
