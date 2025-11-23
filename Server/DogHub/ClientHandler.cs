@@ -4,22 +4,43 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
+/// <summary>
+/// Обработчик подключений клиентов
+/// </summary>
 class ClientHandler
 {
     private DateTime lastAcivityTime;
+    private DateTime lastPingPongTime;
 
     private DataBaseModel dbModel { get; set; }
     private SQLCommandManager sqlCM { get; set; }
 
-    public ClientHandler(DataBaseModel dbModel, SQLCommandManager sqlCM)
+    private int id;
+    private ICloseConnection server { get; set; }
+
+    /// <summary>
+    /// Конструктор класса
+    /// </summary>
+    /// <param name="id">Идентификатор клиента</param>
+    /// <param name="dbModel">Объект работы с БД</param>
+    /// <param name="sqlCM">Command Manager с набором select запросов</param>
+    /// <param name="server">Сервер которому принадлежит клиент</param>
+    public ClientHandler(int id, DataBaseModel dbModel, SQLCommandManager sqlCM, ICloseConnection server)
     {
+        this.id = id;
         this.dbModel = dbModel;
         this.sqlCM = sqlCM;
+        this.server = server;
     }
 
     /// <summary>
-    /// Формирует и отправляет HTTP-ответ.
+    /// Формирует и отправляет HTTP-ответ
     /// </summary>
+    /// <param name="stream">Открытое TCP соединение</param>
+    /// <param name="statusCode">Код обработки</param>
+    /// <param name="reasonPhrase">Сообщение</param>
+    /// <param name="contentType">Вид контента (строка, json, и тд)</param>
+    /// <param name="body">Полезная нагрузка</param>
     private void WriteResponse(NetworkStream stream, int statusCode, string reasonPhrase, string contentType, string body)
     {
         if (body == null)
@@ -44,7 +65,10 @@ class ClientHandler
         stream.Write(bodyBytes, 0, bodyBytes.Length);
     }
 
-
+    /// <summary>
+    /// Обработка подключения
+    /// </summary>
+    /// <param name="stream">Открытое TCP соединение</param>
     private void HandleRequest(NetworkStream stream)
     {
         try
@@ -54,7 +78,6 @@ class ClientHandler
             {
                 return;
             }
-            lastAcivityTime = DateTime.Now;
 
             // Читаем HTTP-запрос целиком (простая реализация для GET).
             byte[] buffer = new byte[8192];
@@ -97,11 +120,18 @@ class ClientHandler
             }
 
             string method = requestLineParts[0];
-            if (!string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(method, "PONG", StringComparison.OrdinalIgnoreCase))
+            {
+                lastPingPongTime = DateTime.Now;
+                return;
+            }
+            else if (!string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase))
             {
                 WriteResponse(stream, 405, "Method Not Allowed", "text/plain; charset=utf-8", "Only GET is supported");
                 return;
             }
+
+            lastAcivityTime = DateTime.Now;
 
             string[] uri = requestLineParts[1].Split('/').Skip(1).ToArray();
             if (uri.Length < 2)
@@ -134,9 +164,11 @@ class ClientHandler
     }
 
     /// <summary>
-    /// Обработка одного клиента: читаем HTTP-запрос и отправляем ответ.
+    /// Обработка одного клиента: читаем HTTP-запрос и отправляем ответ
     /// </summary>
-    /// <param name="state">TcpClient</param>
+    /// <param name="state">
+    /// Ссылка на TcpClient объект принадлежащий подключению
+    /// </param>
     public void Handle(object? state)
     {
         TcpClient? client = state as TcpClient;
@@ -149,11 +181,16 @@ class ClientHandler
 
         try
         {
-            int inactivityTimeout = 300;   // 6 минут неактивности
-            lastAcivityTime = DateTime.Now;
+            // 6 минут неактивности
+            // Но браузеры разрывают соединение через 1-2 минуты
+            int inactivityTimeout = 300;
+            lastAcivityTime = DateTime.Now; 
             
-            client.ReceiveTimeout = 5000;  // 5 секунд на ожидание получения следующего пакета данных 
-            client.SendTimeout = 5000;     // 5 секунд на подтверждение TCP отправки данных
+            // 5 секунд на ожидание получения следующего пакета данных
+            client.ReceiveTimeout = 5000;
+
+            // 5 секунд на подтверждение TCP отправки данных  
+            client.SendTimeout = 5000;
 
             stream = client.GetStream();
             while (client.Connected)
@@ -166,7 +203,9 @@ class ClientHandler
                 HandleRequest(stream);
                 if (!stream.DataAvailable)
                 {
-                    if (client.Client.Poll(1000, SelectMode.SelectRead) && client.Available == 0)
+                    // Проверка доступности клиента
+                    if (client.Client.Poll(1000, SelectMode.SelectRead) &&
+                        client.Available == 0)
                     {
                         break;
                     }
@@ -200,6 +239,10 @@ class ClientHandler
             catch
             {
                 // игнорируем
+            }
+            finally
+            {
+                server.CloseConnection(id);
             }
         }
     }
