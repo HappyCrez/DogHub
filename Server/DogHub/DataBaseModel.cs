@@ -1,3 +1,5 @@
+namespace DogHub;
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -9,7 +11,7 @@ using System.Data;
 /// Класс поддерживает подключение к базе данных и выполняет
 /// операции чтения/записи. Добавлены методы для возврата данных в JSON.
 /// </summary>
-class DataBaseModel
+public class DataBaseModel
 {
     /// <summary>
     /// Строка подключения к PostgreSQL
@@ -49,13 +51,26 @@ class DataBaseModel
     /// </summary>
     /// <param name="sql">Произвольный SQL-запрос</param>
     /// <returns>Возвращает результат выполнения SQL в формате json</returns>
-    public string ExecuteSQL(string sql, params string[] sqlParams)
+    public string ExecuteSQL(string sql, IDictionary<string, object>? parameters = null)
     {
         try
         {
             using var connection = CreateConnection();
             connection.Open();
+
             using var command = new NpgsqlCommand(sql, connection);
+
+            // Параметры (для @id, @event_id и т.п.)
+            if (parameters != null)
+            {
+                foreach (var kvp in parameters)
+                {
+                    var name = kvp.Key.TrimStart('@'); // "@id" или "id"
+                    var value = kvp.Value ?? DBNull.Value;
+                    command.Parameters.AddWithValue(name, value);
+                }
+            }
+
             if (sql.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
             {
                 return ExecuteQuery(command);
@@ -67,7 +82,7 @@ class DataBaseModel
         }
         catch (Exception)
         {
-            return $"{{ \"error\": \"Ошибка выполнения запроса\"}}\r\n";
+            return "{ \"error\": \"Ошибка выполнения запроса\"}\r\n";
         }
     }
 

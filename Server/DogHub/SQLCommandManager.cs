@@ -1,106 +1,80 @@
+namespace DogHub;
+
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Text;
 
 /// <summary>
-/// Читает sql команды из файла и отдает их по запросу 
+/// Читает sql-команды из файла SQLCommands.json и отдаёт их по имени.
+/// Загружается один раз при старте приложения.
 /// </summary>
-class SQLCommandManager
+public class SQLCommandManager
 {
-    // Путь к файлу с командами выборки данных
-    private const string pathToSQLCommands = "./Assets/SQLCommands.json";
-    
-    // Загруженный json
-    private JsonElement jsonData;
+    private readonly JsonElement jsonData;
+    private readonly string sourcePath;
 
-    private static readonly Lazy<SQLCommandManager> instance = 
-        new Lazy<SQLCommandManager>(() => new SQLCommandManager(pathToSQLCommands));
+    // Ленивая синглтон-инициализация
+    private static readonly Lazy<SQLCommandManager> lazy =
+        new(() => new SQLCommandManager(FindSqlCommandsPath()));
 
+    public static SQLCommandManager Instance => lazy.Value;
 
-    /// <summary>
-    /// Проходит по строке sql и ищет вхождение символа $$,
-    /// заменяя его на следующий переданный параметр 
-    /// </summary>
-    /// <param name="sql">Строка sql запроса</param>
-    /// <param name="sqlParams">Параметры для модификации sql запроса</param>
-    /// <returns>Возвращает модифицированный sql запрос</returns>
-    private string UpdateSQL(string sql, params string[] sqlParams)
+    private SQLCommandManager(string filePath)
     {
-        if (sqlParams == null || sqlParams.Length == 0)
-        {
-            return sql;
-        }
+        sourcePath = filePath;
 
-        var result = new StringBuilder();
-        int paramIndex = 0;
-        
-        for (int i = 0; i < sql.Length; i++)
-        {
-            if (i < sql.Length - 1 && sql[i] == '$' && sql[i + 1] == '$')
-            {
-                if (paramIndex < sqlParams.Length)
-                {
-                    result.Append(sqlParams[paramIndex]);
-                    paramIndex++;
-                    i++; // Пропускаем следующий символ '$'
-                }
-                else
-                {
-                    // Если параметры закончились, оставляем "$$"
-                    result.Append("$$");
-                    i++; // Пропускаем следующий символ '$'
-                }
-            }
-            else
-            {
-                result.Append(sql[i]);
-            }
-        }
-        return result.ToString();
-    }
-    
-    /// <summary>
-    /// Инициализирует менеджера комманд по json файлу с набором комманд
-    /// </summary>
-    /// <param name="filename">путь к json файлу с набором sql команд</param>
-    private SQLCommandManager(string filename)
-    {
         try
         {
-            string fileContent = File.ReadAllText(filename);
-            JsonDocument doc = JsonDocument.Parse(fileContent);
-            jsonData = doc.RootElement;
+            var jsonText = File.ReadAllText(filePath);
+            using var doc = JsonDocument.Parse(jsonText);
+            jsonData = doc.RootElement.Clone();
         }
-        catch (IOException ex)
+        catch (Exception ex)
         {
-            Console.WriteLine($"SQLCommandManager can't handle json: ${ex.Message}");
-            throw; // Передаем исключение на уровень выше
+            Console.WriteLine($"SQLCommandManager can't handle json: {ex.Message}");
+            throw;
         }
     }
 
     /// <summary>
-    /// Возвращает объект класса
+    /// Ищет файл Assets/SQLCommands.json, поднимаясь от текущей директории вверх.
+    /// Работает и если приложение стартует из bin/Debug, и из Server/DogHub, и из корня репо.
     /// </summary>
-    public static SQLCommandManager Instance 
+    private static string FindSqlCommandsPath()
     {
-        get { return instance.Value; }
-    }
-    
-    /// <summary>
-    /// Ищет в json файле маппинг по соответствующему имени команды
-    /// </summary>
-    /// <param name="commandName">Имя команды в файле json</param>
-    /// <returns>
-    /// Возвращает строку соответствующего sql запроса,
-    /// если такой запрос не был мапирован, то возвращает пустую строку
-    /// </returns>
-    public string GetCommand(string commandName, params string[] sqlParams)
-    {
-        string sqlCommand = string.Empty;
-        if (jsonData.TryGetProperty(commandName, out JsonElement property))
+        var currentDir = Directory.GetCurrentDirectory();
+
+        while (!string.IsNullOrEmpty(currentDir))
         {
-            sqlCommand = property.GetString() ?? string.Empty;
+            var candidate = Path.Combine(currentDir, "Assets", "SQLCommands.json");
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            var parent = Directory.GetParent(currentDir);
+            if (parent == null)
+            {
+                break;
+            }
+
+            currentDir = parent.FullName;
         }
-        return UpdateSQL(sqlCommand, sqlParams);
+
+        throw new FileNotFoundException(
+            "Не удалось найти файл Assets/SQLCommands.json. " +
+            "Убедись, что он лежит в папке Assets в корне репозитория DogHub.");
+    }
+
+    public string GetCommand(string commandName)
+    {
+        if (!jsonData.TryGetProperty(commandName, out var property))
+        {
+            throw new KeyNotFoundException(
+                $"SQL command '{commandName}' not found in {sourcePath}");
+        }
+
+        return property.GetString() ?? string.Empty;
     }
 }
