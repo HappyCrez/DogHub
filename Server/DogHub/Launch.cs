@@ -13,13 +13,15 @@ public class Launch
     {
         // Загружаем конфиг из .env и собираем строку подключения к БД
         var config = AppConfig.FromEnv();
-        var connectionConfig = config.BuildConnectionString();
 
-        // Инициализация работы с БД
-        DataBaseModel dataBase = new DataBaseModel(connectionConfig);
+        // Поднимаем почтовый сервис
+        new MailService(config.BuildMailConfiguration());
+
+        // Конфигурируем подключение к БД
+        DataBaseModel dataBase = new DataBaseModel(config.BuildConnectionString());
         // TODO::Три попытки тестового соединения с БД
-
-        // Запуск HTTP-сервера
+        
+        // Поднимаем сервис СУБД
         new Server(dataBase);
     }
 
