@@ -9,7 +9,7 @@ using System.Data;
 /// Класс поддерживает подключение к базе данных и выполняет
 /// операции чтения/записи. Добавлены методы для возврата данных в JSON.
 /// </summary>
-class DataBaseModel
+public class DataBaseModel
 {
     /// <summary>
     /// Строка подключения к PostgreSQL
@@ -67,7 +67,7 @@ class DataBaseModel
         }
         catch (Exception)
         {
-            return $"{{ \"error\": \"Ошибка выполнения запроса\"}}\r\n";
+            return string.Empty;
         }
     }
 

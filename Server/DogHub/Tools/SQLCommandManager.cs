@@ -1,6 +1,5 @@
 using System.IO;
 using System.Text.Json;
-using System.Text;
 
 /// <summary>
 /// Читает sql команды из файла и отдает их по запросу 
@@ -15,49 +14,6 @@ class SQLCommandManager
 
     private static readonly Lazy<SQLCommandManager> instance = 
         new Lazy<SQLCommandManager>(() => new SQLCommandManager(pathToSQLCommands));
-
-
-    /// <summary>
-    /// Проходит по строке sql и ищет вхождение символа $$,
-    /// заменяя его на следующий переданный параметр 
-    /// </summary>
-    /// <param name="sql">Строка sql запроса</param>
-    /// <param name="sqlParams">Параметры для модификации sql запроса</param>
-    /// <returns>Возвращает модифицированный sql запрос</returns>
-    private string UpdateSQL(string sql, params string[] sqlParams)
-    {
-        if (sqlParams == null || sqlParams.Length == 0)
-        {
-            return sql;
-        }
-
-        var result = new StringBuilder();
-        int paramIndex = 0;
-        
-        for (int i = 0; i < sql.Length; i++)
-        {
-            if (i < sql.Length - 1 && sql[i] == '$' && sql[i + 1] == '$')
-            {
-                if (paramIndex < sqlParams.Length)
-                {
-                    result.Append(sqlParams[paramIndex]);
-                    paramIndex++;
-                    i++; // Пропускаем следующий символ '$'
-                }
-                else
-                {
-                    // Если параметры закончились, оставляем "$$"
-                    result.Append("$$");
-                    i++; // Пропускаем следующий символ '$'
-                }
-            }
-            else
-            {
-                result.Append(sql[i]);
-            }
-        }
-        return result.ToString();
-    }
     
     /// <summary>
     /// Инициализирует менеджера комманд по json файлу с набором комманд
@@ -101,6 +57,6 @@ class SQLCommandManager
         {
             sqlCommand = property.GetString() ?? string.Empty;
         }
-        return UpdateSQL(sqlCommand, sqlParams);
+        return TextFormatter.ModifyStr(sqlCommand, sqlParams);
     }
 }

@@ -40,8 +40,9 @@ class Server : ICloseConnection
             while (true)
             {
                 TcpClient tcpClient = listener.AcceptTcpClient();
-                Console.WriteLine($"Подключен клиент: {tcpClient.Client.RemoteEndPoint}");
 
+                Console.WriteLine($"Подключен клиент: {tcpClient.Client.RemoteEndPoint}");
+                
                 // Сохраняем пару уникальный id клиента и ссылку на обрабатывающий подключение объект
                 clientId++;
                 client.Add(clientId, new ClientHandler(this, clientId, tcpClient, dbModel));
@@ -70,6 +71,7 @@ class Server : ICloseConnection
         if (client.ContainsKey(clientId))
         {
             Console.WriteLine($"Клиент {client[clientId].Connection.Client.RemoteEndPoint} отключен.");
+            
             try // Пытаемся освободить сокет
             {
                 client[clientId].Connection.GetStream()?.Close();

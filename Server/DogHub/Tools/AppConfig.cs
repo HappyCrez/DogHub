@@ -22,6 +22,8 @@ public class AppConfig
     private readonly string mailFilePath;
     private readonly string mailTimeout;
 
+    public static bool DEBUG = true;
+
     /// <summary>
     /// Инициирует поля доступные только для чтения
     /// </summary>
