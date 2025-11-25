@@ -2,8 +2,6 @@ namespace DogHub;
 
 public class Launch
 {
-    private const string pathToSQLCommands = "./Assets/SQLCommands.json";
-
     /// <summary>
     /// Точка входа в программу.
     /// Поднимает HTTP-сервер и больше ничего не делает.
@@ -13,14 +11,16 @@ public class Launch
     {
         // Загружаем конфиг из .env и собираем строку подключения к БД
         var config = AppConfig.FromEnv();
-        var connectionConfig = config.BuildConnectionString();
 
-        // Инициализация работы с БД
-        DataBaseModel dataBase = new DataBaseModel(connectionConfig);
+        // Конфигурируем подключение к БД
+        DataBaseModel database = new DataBaseModel(config.BuildConnectionString());
         // TODO::Три попытки тестового соединения с БД
+        
+        // Поднимаем почтовый сервис
+        new MailService(config.BuildMailConfiguration(), database);
 
-        // Запуск HTTP-сервера
-        new Server(dataBase);
+        // Поднимаем сервис СУБД
+        new Server(database);
     }
 
     public static int Add(int a, int b)
