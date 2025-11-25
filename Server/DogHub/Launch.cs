@@ -19,15 +19,8 @@ public class Launch
         DataBaseModel dataBase = new DataBaseModel(connectionConfig);
         // TODO::Три попытки тестового соединения с БД
 
-        // Загрузка SQL-команд из JSON
-        SQLCommandManager sqlCM = new SQLCommandManager(pathToSQLCommands);
-        if (sqlCM == null) 
-        {
-            throw new InvalidOperationException("Failed to read sql queries");
-        }
-
         // Запуск HTTP-сервера
-        new Server(dataBase, sqlCM);
+        new Server(dataBase);
     }
 
     public static int Add(int a, int b)

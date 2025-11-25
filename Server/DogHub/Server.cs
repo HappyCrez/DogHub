@@ -1,7 +1,6 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 
 public interface ICloseConnection
@@ -20,17 +19,14 @@ class Server : ICloseConnection
     private Dictionary<int, ClientHandler> client = new Dictionary<int, ClientHandler>();
 
     private DataBaseModel dbModel { get; set; }
-    private SQLCommandManager sqlCM { get; set; }
 
     /// <summary>
     /// Слушает подключения и передает их на обработку объекту ClientHandler
     /// </summary>
     /// <param name="dbModel">Объект выполняющий запросы к БД</param>
-    /// <param name="sqlCM">Command Manager хранит select команды</param>
-    public Server(DataBaseModel dbModel, SQLCommandManager sqlCM)
+    public Server(DataBaseModel dbModel)
     {
         this.dbModel = dbModel;
-        this.sqlCM = sqlCM;
 
         TcpListener? listener = null;
         try
@@ -46,13 +42,13 @@ class Server : ICloseConnection
                 TcpClient tcpClient = listener.AcceptTcpClient();
                 Console.WriteLine($"Подключен клиент: {tcpClient.Client.RemoteEndPoint}");
 
-                // сохраняем пару уникальный id клиента и ссылку на обрабатывающий подключение объект
+                // Сохраняем пару уникальный id клиента и ссылку на обрабатывающий подключение объект
                 clientId++;
-                client.Add(clientId, new ClientHandler(clientId, dbModel, sqlCM, this));
+                client.Add(clientId, new ClientHandler(this, clientId, tcpClient, dbModel));
 
                 // Для каждого клиента запускаем отдельный поток обработки.
                 Thread clientThread = new Thread(client[clientId].Handle);
-                clientThread.Start(tcpClient);
+                clientThread.Start();
             }
         }
         catch (Exception ex)
@@ -73,6 +69,9 @@ class Server : ICloseConnection
     {
         if (client.ContainsKey(clientId))
         {
+            Console.WriteLine($"Клиент {client[clientId].Connection.Client.RemoteEndPoint} отключен.");
+            client[clientId].Connection.GetStream()?.Close();
+            client[clientId].Connection?.Close();
             client.Remove(clientId);
         }
     }
