@@ -12,6 +12,7 @@ import EventDetails from "./pages/EventDetails";
 import ProgramDetails from "./pages/ProgramDetails";
 import PeopleTrainingDetails from "./pages/PeopleTrainingDetails";
 import Auth from "./pages/Auth";
+import Account from "./pages/Account";
 
 export default function App() {
     const location = useLocation();
@@ -45,6 +46,7 @@ export default function App() {
                     <Routes location={location}>
                         <Route path="/" element={<Home />} />
                         <Route path="/auth" element={<Auth />} />
+                        <Route path="/account" element={<Account />} />
                         <Route path="/dogs" element={<Dogs />} />
                         <Route path="/events" element={<Events />} />
                         <Route path="/events/:id" element={<EventDetails />} />

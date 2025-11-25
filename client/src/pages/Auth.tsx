@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FormEvent, ChangeEvent } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Mode = "login" | "register";
 
@@ -48,9 +48,36 @@ const CITY_OPTIONS = [
 const inputBaseClass =
     "block w-full rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm outline-none " +
     "bg-white/90 placeholder:text-gray-400 focus:placeholder:text-gray-300 " +
-    "transition-colors transition-transform transition-shadow duration-150 ease-out " +
+    "transition duration-150 ease-out " +
     "focus:border-black focus:ring-1 focus:ring-black " +
     "transform focus:scale-[1.01] focus:shadow-md";
+
+function getPasswordRules(password: string) {
+    return {
+        length: password.length >= 8,
+        lower: /[a-z]/.test(password),
+        upper: /[A-Z]/.test(password),
+        digit: /\d/.test(password),
+    };
+}
+
+function PasswordRuleItem({ ok, text }: { ok: boolean; text: string }) {
+    return (
+        <li className="flex items-center gap-2">
+            <span
+                className={
+                    "flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold " +
+                    (ok
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-gray-200 text-gray-500")
+                }
+            >
+                {ok ? "✓" : "•"}
+            </span>
+            <span className={ok ? "text-emerald-700" : "text-gray-600"}>{text}</span>
+        </li>
+    );
+}
 
 export default function Auth() {
     const [mode, setMode] = useState<Mode>("login");
@@ -61,14 +88,53 @@ export default function Auth() {
     const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
     const [showCityDropdown, setShowCityDropdown] = useState(false);
 
+    const [passwordValue, setPasswordValue] = useState("");
+    const [passwordConfirmValue, setPasswordConfirmValue] = useState("");
+    const [showPasswordHint, setShowPasswordHint] = useState(false); // подсказка по паролю
+
+    const passwordRules = getPasswordRules(passwordValue);
+    const isPasswordStrong =
+        passwordRules.length &&
+        passwordRules.lower &&
+        passwordRules.upper &&
+        passwordRules.digit;
+
+    const isPasswordConfirmMatch =
+        mode !== "register" ||
+        passwordConfirmValue.length === 0 ||
+        passwordConfirmValue === passwordValue;
+
+    const buttonLabel = loading
+        ? "Отправляем данные…"
+        : mode === "login"
+            ? "Войти"
+            : "Зарегистрироваться";
+
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setMessage(null);
+
+        // Валидация пароля только при регистрации
+        if (mode === "register") {
+            if (!isPasswordStrong) {
+                setMessage(
+                    "Пароль слишком простой. Он должен быть не короче 8 символов и содержать строчные и прописные латинские буквы, а также цифры."
+                );
+                return;
+            }
+
+            if (passwordValue !== passwordConfirmValue) {
+                setMessage("Пароли не совпадают. Проверьте ещё раз.");
+                return;
+            }
+        }
+
         setLoading(true);
 
         const formData = new FormData(e.currentTarget);
         const payload = Object.fromEntries(formData.entries());
 
+        // На будущее: сюда добавятся реальные запросы к серверу авторизации.
         console.log("Форма авторизации/регистрации (заглушка):", {
             mode,
             payload,
@@ -106,11 +172,12 @@ export default function Auth() {
         setShowCityDropdown(false);
     }
 
-    const buttonLabel = loading
-        ? "Отправляем данные…"
-        : mode === "login"
-            ? "Войти"
-            : "Зарегистрироваться";
+    const isPasswordError =
+        mode === "register" && passwordValue.length > 0 && !isPasswordStrong;
+    const isConfirmError =
+        mode === "register" &&
+        passwordConfirmValue.length > 0 &&
+        passwordConfirmValue !== passwordValue;
 
     return (
         <section className="space-y-8">
@@ -339,9 +406,41 @@ export default function Auth() {
                                     autoComplete={
                                         mode === "login" ? "current-password" : "new-password"
                                     }
-                                    className={inputBaseClass}
+                                    className={
+                                        inputBaseClass +
+                                        (isPasswordError
+                                            ? " border-red-400 focus:border-red-500 focus:ring-red-500"
+                                            : "")
+                                    }
+                                    onChange={(e) => setPasswordValue(e.target.value)}
+                                    onFocus={() => setShowPasswordHint(true)}
+                                    onBlur={() => setShowPasswordHint(false)}
                                 />
                             </div>
+
+                            {/* Подсказки по паролю: только при регистрации И только когда фокус на первом поле */}
+                            <AnimatePresence>
+                                {mode === "register" && showPasswordHint && (
+                                    <motion.div
+                                        key="password-hint"
+                                        initial={{ opacity: 0, y: -6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -6 }}
+                                        transition={{ duration: 0.18, ease: "easeOut" }}
+                                        className="rounded-xl bg-gray-50 px-3 py-2 text-[11px] text-gray-600"
+                                    >
+                                        <p className="mb-1 font-medium text-gray-700">
+                                            Пароль должен содержать:
+                                        </p>
+                                        <ul className="space-y-1">
+                                            <PasswordRuleItem ok={passwordRules.length} text="не менее 8 символов" />
+                                            <PasswordRuleItem ok={passwordRules.lower} text="строчные латинские буквы (a–z)" />
+                                            <PasswordRuleItem ok={passwordRules.upper} text="прописные латинские буквы (A–Z)" />
+                                            <PasswordRuleItem ok={passwordRules.digit} text="цифры (0–9)" />
+                                        </ul>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             {mode === "register" && (
                                 <div className="space-y-1 group">
@@ -357,8 +456,21 @@ export default function Auth() {
                                         type="password"
                                         required
                                         autoComplete="new-password"
-                                        className={inputBaseClass}
+                                        className={
+                                            inputBaseClass +
+                                            (isConfirmError
+                                                ? " border-red-400 focus:border-red-500 focus:ring-red-500"
+                                                : "")
+                                        }
+                                        onChange={(e) =>
+                                            setPasswordConfirmValue(e.target.value)
+                                        }
                                     />
+                                    {!isPasswordConfirmMatch && (
+                                        <p className="text-[11px] text-red-600">
+                                            Пароли не совпадают.
+                                        </p>
+                                    )}
                                 </div>
                             )}
 
@@ -393,7 +505,7 @@ export default function Auth() {
                                            hover:shadow-lg hover:scale-[1.01] active:scale-[0.98]
                                            disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                <span className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-white/10" />
+                                <span className="pointer-events-none absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
                                 <span className="relative z-10 flex items-center gap-1.5">
                                     <span>{buttonLabel}</span>
                                     {!loading && (
