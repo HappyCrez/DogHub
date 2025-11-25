@@ -30,10 +30,18 @@ class ClientHandler
         this.Connection = connection;
     }
 
+    /// <summary>
+    /// Пересылает данные клиенту
+    /// </summary>
+    /// <param name="responseData">Данные для отправки</param>
     private void WriteResponse(string responseData)
     {
-        byte[] bytes = Encoding.ASCII.GetBytes(responseData);
-        Connection.GetStream().Write(bytes, 0, bytes.Length);
+        try // tcp соединение может закрыться в одностроннем порядке 
+        {
+            byte[] bytes = Encoding.ASCII.GetBytes(responseData);
+            Connection.GetStream().Write(bytes, 0, bytes.Length);
+        }
+        catch { }
     }
 
     /// <summary>
@@ -80,14 +88,21 @@ class ClientHandler
             return;
         }
 
-        string result = dbModel.ExecuteSQL(HttpHandler.Instance.HandleRequest(requestText));
-        if (result == string.Empty)
+        try
+        {
+            string result = dbModel.ExecuteSQL(HttpHandler.Instance.HandleRequest(requestText));
+            if (result != string.Empty)
+            {
+                WriteResponse(HttpResponse.Instance.Create(200, "OK", "application/json", result));
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка создания sql ответа: {ex.Message}");
+        }
+        finally
         {
             WriteResponse(HttpResponse.InvalidRequest);
-        }
-        else
-        {
-            WriteResponse(HttpResponse.Instance.Create(200, "OK", "application/json", result));
         }
     }
 

@@ -70,8 +70,12 @@ class Server : ICloseConnection
         if (client.ContainsKey(clientId))
         {
             Console.WriteLine($"Клиент {client[clientId].Connection.Client.RemoteEndPoint} отключен.");
-            client[clientId].Connection.GetStream()?.Close();
-            client[clientId].Connection?.Close();
+            try // Пытаемся освободить сокет
+            {
+                client[clientId].Connection.GetStream()?.Close();
+                client[clientId].Connection?.Close();
+            }
+            catch { }
             client.Remove(clientId);
         }
     }
