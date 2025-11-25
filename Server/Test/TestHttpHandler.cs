@@ -5,6 +5,14 @@ namespace Test;
 [TestClass]
 public sealed class TestHandler
 {
+    [AssemblyInitialize]
+    public static void AssemblyInitialize(TestContext context)
+    {
+        // Устанавливаем правильную рабочую директорию для всех тестов
+        string projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
+        Directory.SetCurrentDirectory(projectRoot);
+    }
+
     // Все команды для Get читаются из файла SQLCommands.json
     [TestMethod]
     public void Test_HttpGet()
