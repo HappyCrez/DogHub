@@ -15,7 +15,7 @@ async function getJson<T>(path: string): Promise<T> {
 
 /* ===== события ===== */
 
-// Одна строка из /api/events (SELECT ... FROM events)
+// Одна строка из /events (SELECT ... FROM events)
 export interface ApiEventRow {
     id: number;
     title: string;
@@ -28,17 +28,17 @@ export interface ApiEventRow {
 }
 
 export function getEvents(): Promise<ApiEventRow[]> {
-    return getJson<ApiEventRow[]>("/api/events");
+    return getJson<ApiEventRow[]>("/events");
 }
 
 export async function getEvent(id: number): Promise<ApiEventRow | null> {
-    const rows = await getJson<ApiEventRow[]>(`/api/event/${id}`);
+    const rows = await getJson<ApiEventRow[]>(`/event/${id}`);
     return rows[0] ?? null;
 }
 
 /* ===== собаки ===== */
 
-// Поля соответствуют /api/dogs и /api/chipped-dogs
+// Поля соответствуют /dogs и /chipped-dogs
 export interface ApiDog {
     dogId: number;
     dogName: string;
@@ -56,12 +56,12 @@ export interface ApiDog {
 
 // Все собаки (чипированные и нет)
 export function getDogs(): Promise<ApiDog[]> {
-    return getJson<ApiDog[]>("/api/dogs");
+    return getJson<ApiDog[]>("/dogs");
 }
 
 // Только чипированные (chip_number IS NOT NULL)
 export function getChippedDogs(): Promise<ApiDog[]> {
-    return getJson<ApiDog[]>("/api/chiped");
+    return getJson<ApiDog[]>("/chiped");
 }
 
 export interface ApiEventDogRow {
@@ -79,7 +79,7 @@ export interface ApiEventDogRow {
 }
 
 export function getEventDogs(eventId: number): Promise<ApiEventDogRow[]> {
-    return getJson<ApiEventDogRow[]>(`/api/event_dogs/${eventId}`);
+    return getJson<ApiEventDogRow[]>(`/event_dogs/${eventId}`);
 }
 
 /* ===== участники + их собаки ===== */
@@ -108,7 +108,7 @@ export interface ApiUserWithDogRow {
 }
 
 export function getUsers(): Promise<ApiUserWithDogRow[]> {
-    return getJson<ApiUserWithDogRow[]>("/api/members");
+    return getJson<ApiUserWithDogRow[]>("/members");
 }
 
 /* ===== обучающие программы для собак ===== */
@@ -123,7 +123,7 @@ export interface ApiProgramRow {
 }
 
 export function getPrograms(): Promise<ApiProgramRow[]> {
-    return getJson<ApiProgramRow[]>("/api/programs");
+    return getJson<ApiProgramRow[]>("/programs");
 }
 
 export interface ApiProgramDogRow {
@@ -141,7 +141,7 @@ export interface ApiProgramDogRow {
 }
 
 export function getProgramDogs(programId: number): Promise<ApiProgramDogRow[]> {
-    return getJson<ApiProgramDogRow[]>(`"/api/program_dogs/${programId}"`.slice(1, -1));
+    return getJson<ApiProgramDogRow[]>(`"/program_dogs/${programId}"`.slice(1, -1));
 }
 
 /* ===== тренинги для людей ===== */
@@ -150,7 +150,7 @@ export function getProgramDogs(programId: number): Promise<ApiProgramDogRow[]> {
 export type ApiPeopleTrainingRow = ApiEventRow;
 
 export function getPeopleTrainings(): Promise<ApiPeopleTrainingRow[]> {
-    return getJson<ApiPeopleTrainingRow[]>("/api/people_events");
+    return getJson<ApiPeopleTrainingRow[]>("/people_events");
 }
 
 /* ===== участники события (владельцы) ===== */
@@ -169,5 +169,5 @@ export interface ApiEventMemberRow {
 }
 
 export function getEventMembers(eventId: number): Promise<ApiEventMemberRow[]> {
-    return getJson<ApiEventMemberRow[]>(`/api/event_members/${eventId}`);
+    return getJson<ApiEventMemberRow[]>(`/event_members/${eventId}`);
 }
