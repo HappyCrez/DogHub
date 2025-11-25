@@ -44,6 +44,14 @@ const CITY_OPTIONS = [
     "Пенза",
 ];
 
+// базовый класс для всех текстовых инпутов с микро-анимациями
+const inputBaseClass =
+    "block w-full rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm outline-none " +
+    "bg-white/90 placeholder:text-gray-400 focus:placeholder:text-gray-300 " +
+    "transition-colors transition-transform transition-shadow duration-150 ease-out " +
+    "focus:border-black focus:ring-1 focus:ring-black " +
+    "transform focus:scale-[1.01] focus:shadow-md";
+
 export default function Auth() {
     const [mode, setMode] = useState<Mode>("login");
     const [loading, setLoading] = useState(false);
@@ -98,10 +106,16 @@ export default function Auth() {
         setShowCityDropdown(false);
     }
 
+    const buttonLabel = loading
+        ? "Отправляем данные…"
+        : mode === "login"
+            ? "Войти"
+            : "Зарегистрироваться";
+
     return (
         <section className="space-y-8">
             <div className="grid items-start gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-                {/* Левая цветная часть */}
+                {/* Левая цветная часть с живым градиентом */}
                 <div className="relative overflow-hidden rounded-3xl p-8 shadow-md auth-gradient">
                     {/* Декоративные пятна */}
                     <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-white/40 blur-3xl" />
@@ -115,7 +129,8 @@ export default function Auth() {
                         </div>
 
                         <h1 className="mt-4 text-3xl font-extrabold leading-tight md:text-4xl">
-                            Клуб собаководов, <br className="hidden sm:block" />
+                            Клуб собаководов,
+                            <br className="hidden sm:block" />
                             где любят и людей, и собак
                         </h1>
 
@@ -127,7 +142,9 @@ export default function Auth() {
                         <ul className="mt-5 space-y-2 text-sm text-gray-800">
                             <li className="flex items-start gap-2">
                                 <span className="mt-0.5 text-base">🎓</span>
-                                <span>Обучающие программы для собак и тренинги для владельцев.</span>
+                                <span>
+                                    Обучающие программы для собак и тренинги для владельцев.
+                                </span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <span className="mt-0.5 text-base">📅</span>
@@ -135,7 +152,9 @@ export default function Auth() {
                             </li>
                             <li className="flex items-start gap-2">
                                 <span className="mt-0.5 text-base">💬</span>
-                                <span>Сообщество людей, которые так же без ума от собак, как и вы.</span>
+                                <span>
+                                    Сообщество людей, которые так же без ума от собак, как и вы.
+                                </span>
                             </li>
                         </ul>
 
@@ -205,10 +224,10 @@ export default function Auth() {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             {mode === "register" && (
-                                <div className="space-y-1">
+                                <div className="space-y-1 group">
                                     <label
                                         htmlFor="fullName"
-                                        className="block text-sm font-medium text-gray-700"
+                                        className="block text-sm font-medium text-gray-700 transition-colors group-focus-within:text-gray-900 group-focus-within:font-semibold"
                                     >
                                         Имя и фамилия
                                     </label>
@@ -218,16 +237,16 @@ export default function Auth() {
                                         type="text"
                                         required
                                         autoComplete="name"
-                                        className="block w-full rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                                        className={inputBaseClass}
                                         placeholder="Например, Анна Иванова"
                                     />
                                 </div>
                             )}
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 group">
                                 <label
                                     htmlFor="email"
-                                    className="block text-sm font-medium text-gray-700"
+                                    className="block text-sm font-medium text-gray-700 transition-colors group-focus-within:text-gray-900 group-focus-within:font-semibold"
                                 >
                                     E-mail
                                 </label>
@@ -237,16 +256,16 @@ export default function Auth() {
                                     type="email"
                                     required
                                     autoComplete="email"
-                                    className="block w-full rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                                    className={inputBaseClass}
                                     placeholder="you@example.com"
                                 />
                             </div>
 
                             {mode === "register" && (
-                                <div className="space-y-1">
+                                <div className="space-y-1 group">
                                     <label
                                         htmlFor="phone"
-                                        className="block text-sm font-medium text-gray-700"
+                                        className="block text-sm font-medium text-gray-700 transition-colors group-focus-within:text-gray-900 group-focus-within:font-semibold"
                                     >
                                         Телефон
                                     </label>
@@ -255,17 +274,17 @@ export default function Auth() {
                                         name="phone"
                                         type="tel"
                                         autoComplete="tel"
-                                        className="block w-full rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                                        className={inputBaseClass}
                                         placeholder="+7 900 000-00-00"
                                     />
                                 </div>
                             )}
 
                             {mode === "register" && (
-                                <div className="relative space-y-1">
+                                <div className="relative space-y-1 group">
                                     <label
                                         htmlFor="city"
-                                        className="block text-sm font-medium text-gray-700"
+                                        className="block text-sm font-medium text-gray-700 transition-colors group-focus-within:text-gray-900 group-focus-within:font-semibold"
                                     >
                                         Город
                                     </label>
@@ -275,7 +294,7 @@ export default function Auth() {
                                         type="text"
                                         required
                                         autoComplete="address-level2"
-                                        className="block w-full rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                                        className={inputBaseClass}
                                         placeholder="Например, Барнаул"
                                         value={cityInput}
                                         onChange={handleCityChange}
@@ -305,10 +324,10 @@ export default function Auth() {
                                 </div>
                             )}
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 group">
                                 <label
                                     htmlFor="password"
-                                    className="block text-sm font-medium text-gray-700"
+                                    className="block text-sm font-medium text-gray-700 transition-colors group-focus-within:text-gray-900 group-focus-within:font-semibold"
                                 >
                                     Пароль
                                 </label>
@@ -320,15 +339,15 @@ export default function Auth() {
                                     autoComplete={
                                         mode === "login" ? "current-password" : "new-password"
                                     }
-                                    className="block w-full rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                                    className={inputBaseClass}
                                 />
                             </div>
 
                             {mode === "register" && (
-                                <div className="space-y-1">
+                                <div className="space-y-1 group">
                                     <label
                                         htmlFor="passwordConfirm"
-                                        className="block text-sm font-medium text-gray-700"
+                                        className="block text-sm font-medium text-gray-700 transition-colors group-focus-within:text-gray-900 group-focus-within:font-semibold"
                                     >
                                         Повторите пароль
                                     </label>
@@ -338,7 +357,7 @@ export default function Auth() {
                                         type="password"
                                         required
                                         autoComplete="new-password"
-                                        className="block w-full rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                                        className={inputBaseClass}
                                     />
                                 </div>
                             )}
@@ -368,13 +387,21 @@ export default function Auth() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex w-full items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="group relative flex w-full items-center justify-center overflow-hidden rounded-xl
+                                           bg-gradient-to-r from-black via-gray-900 to-gray-800 px-4 py-2.5 text-sm font-semibold
+                                           text-white shadow-md transition duration-150 ease-out
+                                           hover:shadow-lg hover:scale-[1.01] active:scale-[0.98]
+                                           disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {loading
-                                    ? "Отправляем данные…"
-                                    : mode === "login"
-                                        ? "Войти"
-                                        : "Зарегистрироваться"}
+                                <span className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-white/10" />
+                                <span className="relative z-10 flex items-center gap-1.5">
+                                    <span>{buttonLabel}</span>
+                                    {!loading && (
+                                        <span className="mt-[1px] text-base transition-transform duration-150 ease-out group-hover:translate-x-0.5">
+                                            →
+                                        </span>
+                                    )}
+                                </span>
                             </button>
 
                             {mode === "login" ? (
