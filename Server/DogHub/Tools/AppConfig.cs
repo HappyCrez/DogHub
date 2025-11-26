@@ -1,46 +1,37 @@
 using System;
+using System.IO;
 using DotNetEnv;
 
 namespace DogHub;
 
 /// <summary>
-/// Представляет конфигурацию приложения,
-/// загружаемую из файла .env.
+/// Конфигурация приложения, загружаемая из файла .env
 /// </summary>
 public class AppConfig
 {
-    private const string envPath = "./Assets/.env";
-
+    // Параметры базы данных
     private readonly string dbHost;
     private readonly string dbPort;
     private readonly string dbUser;
     private readonly string dbName;
     private readonly string dbPassword;
 
+    // Параметры почтового сервиса
     private readonly string mailUser;
     private readonly string mailPassword;
     private readonly string mailFilePath;
     private readonly string mailTimeout;
 
-    public static bool DEBUG = true;
-
-    /// <summary>
-    /// Инициирует поля доступные только для чтения
-    /// </summary>
-    /// <param name="dbHost">Адрес подключения к БД</param>
-    /// <param name="dbPort">Порт подключения к БД</param>
-    /// <param name="dbUser">Имя пользователя для подключения</param>
-    /// <param name="dbName">Имя БД для подключения</param>
-    /// <param name="dbPassword">Пароль пользователя БД</param>
-    /// <param name="mailUser">Хост почтовый адрес</param>
-    /// <param name="mailPassword">Пароль приложения</param>
-    /// <param name="mailFilePath">Путь к тексту сообщения</param>
-    /// <param name="mailTimeout">
-    /// Время между проверкой состояния БД на изменения
-    /// </param>
-    private AppConfig
-        (string dbHost, string dbPort, string dbUser, string dbName, string dbPassword,
-         string mailUser, string mailPassword, string mailFilePath, string mailTimeout)
+    private AppConfig(
+        string dbHost,
+        string dbPort,
+        string dbUser,
+        string dbName,
+        string dbPassword,
+        string mailUser,
+        string mailPassword,
+        string mailFilePath,
+        string mailTimeout)
     {
         this.dbHost = dbHost;
         this.dbPort = dbPort;
@@ -55,41 +46,78 @@ public class AppConfig
     }
 
     /// <summary>
-    /// Создаёт экземпляр конфигурации, загружая
-    /// значения из файла .env и переменных окружения
+    /// Ищет файл .env в текущей директории и родительских папках
     /// </summary>
-    /// <returns>
-    /// Экземпляр <see cref="AppConfig"/> с заполненными свойствами
-    /// </returns>
+    private static string FindEnvPath()
+    {
+        var currentDir = Directory.GetCurrentDirectory();
+
+        while (!string.IsNullOrEmpty(currentDir))
+        {
+            var rootEnv = Path.Combine(currentDir, ".env");
+            if (File.Exists(rootEnv))
+                return rootEnv;
+
+            var assetsEnv = Path.Combine(currentDir, "Assets", ".env");
+            if (File.Exists(assetsEnv))
+                return assetsEnv;
+
+            var parent = Directory.GetParent(currentDir);
+            if (parent == null)
+                break;
+
+            currentDir = parent.FullName;
+        }
+
+        throw new InvalidOperationException("Файл .env не найден");
+    }
+
+    /// <summary>
+    /// Загружает переменные среды из файла .env и создаёт объект конфигурации
+    /// </summary>
     public static AppConfig FromEnv()
     {
+        var envPath = FindEnvPath();
         Env.Load(envPath);
 
-        // Конфигурация сервиса СУБД
+        // Чтение параметров базы данных
         string dbHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
         string dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
         string dbUser = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
         string dbName = Environment.GetEnvironmentVariable("DB_NAME") ?? "doghub_db";
-        string dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD") 
+        string dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD")
             ?? throw new InvalidOperationException("DB_PASSWORD is not set");
-        
-        // Конфигурация почтового сервиса
+
+        // Чтение параметров почтового сервиса
         string mailUser = Environment.GetEnvironmentVariable("MAIL_USER")
             ?? throw new InvalidOperationException("MAIL_USER is not set");
         string mailPassword = Environment.GetEnvironmentVariable("MAIL_PASSWORD")
             ?? throw new InvalidOperationException("MAIL_PASSWORD is not set");
-        string mailFilePath = Environment.GetEnvironmentVariable("MAIL_FILE_PATH") ?? "./Assets/Mail.html";
+
+        // Чтение пути к HTML-шаблону письма
+        string mailFilePathRaw = Environment.GetEnvironmentVariable("MAIL_FILE_PATH")
+            ?? "MailNotification.html";
+
+        // Чтение таймаута
         string mailTimeout = Environment.GetEnvironmentVariable("MAIL_TIMEOUT") ?? "300";
 
-        return new AppConfig
-            (dbHost, dbPort, dbUser, dbName, dbPassword,
-             mailUser, mailPassword, mailFilePath, mailTimeout);
+        // Директория, из которой загружен файл .env
+        var envDir = Path.GetDirectoryName(envPath)
+                     ?? throw new InvalidOperationException("Не удалось определить директорию .env");
+
+        // Формирование абсолютного пути
+        string mailFilePath = Path.IsPathRooted(mailFilePathRaw)
+            ? mailFilePathRaw
+            : Path.GetFullPath(Path.Combine(envDir, mailFilePathRaw));
+
+        return new AppConfig(
+            dbHost, dbPort, dbUser, dbName, dbPassword,
+            mailUser, mailPassword, mailFilePath, mailTimeout);
     }
 
     /// <summary>
-    /// Собирает строку подключения к базе данных PostgreSQL
+    /// Формирует строку подключения к PostgreSQL
     /// </summary>
-    /// <returns>Строка подключения к базе данных.</returns>
     public string BuildConnectionString()
     {
         return
@@ -99,11 +127,10 @@ public class AppConfig
     }
 
     /// <summary>
-    /// Собирает конфигурацию для подключения к почтовому сервису
+    /// Формирует конфигурацию для почтового сервиса
     /// </summary>
-    /// <returns>Массив параметров настройки подключения</returns>
     public string[] BuildMailConfiguration()
     {
-        return [mailUser, mailPassword, mailFilePath, mailTimeout];
+        return new[] { mailUser, mailPassword, mailFilePath, mailTimeout };
     }
 }

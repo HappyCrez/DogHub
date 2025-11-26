@@ -1,34 +1,35 @@
 {
-    "members":
-    "SELECT u.id AS member_id, u.full_name, u.phone, u.email, u.city, u.avatar_url, u.bio AS owner_bio, u.join_date, u.membership_end_date, u.role, d.id   AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo AS dog_photo, d.tags  AS dog_tags, d.bio AS dog_bio FROM member u LEFT JOIN dog d ON u.id = d.member_id WHERE u.role = 'Пользователь' ORDER BY u.full_name, d.name;"
-    ,
-    "events":
-    "SELECT id, title, category, start_at, end_at, venue, price, description FROM event WHERE category <> 'Образование' OR category IS NULL ORDER BY start_at;"
-    ,
-    "event":
-    "SELECT id, title, category, start_at, end_at, venue, price, description FROM event WHERE id=$$;"
-    ,
-    "programs":
-    "SELECT p.id, p.title, p.type, p.price, p.description, COUNT(pr.dog_id) AS registered_dogs_count FROM program p LEFT JOIN program_registration pr ON p.id = pr.program_id GROUP BY p.id, p.title, p.type, p.price, p.description ORDER BY p.type, p.title;"
-    ,
-    "people_events":
-    "SELECT id, title, category, start_at, end_at, venue, price, description FROM event WHERE category = 'Образование' ORDER BY start_at DESC;"
-    ,
-    "chiped":
-    "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.tags, d.bio, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dog d JOIN member u ON d.member_id = u.id WHERE d.chip_number IS NOT NULL ORDER BY u.full_name, d.name;"
-    ,
-    "dogs":
-    "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.tags, d.bio, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dog d JOIN member u ON d.member_id = u.id ORDER BY u.full_name, d.name;"
-    ,
-    "event_dogs":
-    "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, o.full_name  AS owner_full_name, o.city AS owner_city, d.tags, d.bio FROM event_registration er JOIN dog d ON d.id = er.dog_id JOIN member o ON o.id = d.member_id WHERE er.event_id = $$;"
-    ,
-    "program_dogs": 
-    "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, m.full_name AS owner_full_name, m.city AS owner_city, d.tags, d.bio FROM program_registration pr JOIN dog d ON d.id = pr.dog_id JOIN member m ON m.id = d.member_id WHERE pr.program_id = $$;"
-    ,
-    "event_members": 
-    "SELECT DISTINCT m.id AS member_id, m.full_name, m.phone, m.email, m.city, m.avatar_url, m.bio, m.join_date, m.membership_end_date, m.role FROM event_registration er JOIN member m ON er.member_id = m.id WHERE er.event_id = $$;"
-    ,
-    "notifications":
-    "SELECT * from member;"
+  "members":
+  "SELECT u.id AS member_id, u.full_name, u.phone, u.email, u.city, u.avatar_url, u.bio AS owner_bio, u.join_date, u.membership_end_date, u.role, d.id   AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo AS dog_photo, d.tags  AS dog_tags, d.bio AS dog_bio FROM member u LEFT JOIN dog d ON u.id = d.member_id WHERE u.role = 'Пользователь' ORDER BY u.full_name, d.name;",
+
+  "events":
+  "SELECT id, title, category, start_at, end_at, venue, price, description FROM event WHERE category <> 'Образование' OR category IS NULL ORDER BY start_at;",
+
+  "event":
+  "SELECT id, title, category, start_at, end_at, venue, price, description FROM event WHERE id = @id;",
+
+  "programs":
+  "SELECT p.id, p.title, p.type, p.price, p.description, COUNT(pr.dog_id) AS registered_dogs_count FROM program p LEFT JOIN program_registration pr ON p.id = pr.program_id GROUP BY p.id, p.title, p.type, p.price, p.description ORDER BY p.type, p.title;",
+
+  "people_events":
+  "SELECT id, title, category, start_at, end_at, venue, price, description FROM event WHERE category = 'Образование' ORDER BY start_at DESC;",
+
+  "chiped":
+  "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.tags, d.bio, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dog d JOIN member u ON d.member_id = u.id WHERE d.chip_number IS NOT NULL ORDER BY u.full_name, d.name;",
+
+  "dogs":
+  "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.tags, d.bio, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dog d JOIN member u ON d.member_id = u.id ORDER BY u.full_name, d.name;",
+
+  "event_dogs":
+  "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, o.full_name  AS owner_full_name, o.city AS owner_city, d.tags, d.bio FROM event_registration er JOIN dog d ON d.id = er.dog_id JOIN member o ON o.id = d.member_id WHERE er.event_id = @event_id;",
+
+  "program_dogs": 
+  "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, m.full_name AS owner_full_name, m.city AS owner_city, d.tags, d.bio FROM program_registration pr JOIN dog d ON d.id = pr.dog_id JOIN member m ON m.id = d.member_id WHERE pr.program_id = @program_id;",
+
+  "event_members": 
+  "SELECT DISTINCT m.id AS member_id, m.full_name, m.phone, m.email, m.city, m.avatar_url, m.bio, m.join_date, m.membership_end_date, m.role FROM event_registration er JOIN member m ON er.member_id = m.id WHERE er.event_id = @event_id;",
+  
+  "notifications":
+  "SELECT * from member;"
 }
+

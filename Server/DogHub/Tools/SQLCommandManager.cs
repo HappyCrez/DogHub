@@ -1,62 +1,75 @@
+namespace DogHub;
+
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
 /// <summary>
-/// Читает sql команды из файла и отдает их по запросу 
+/// Загружает SQL-команды из файла SQLCommands.json и предоставляет доступ к ним по имени
 /// </summary>
-class SQLCommandManager
+public class SQLCommandManager
 {
-    // Путь к файлу с командами выборки данных
-    private const string pathToSQLCommands = "./Assets/SQLCommands.json";
-    
-    // Загруженный json
-    private JsonElement jsonData;
+    private readonly JsonElement jsonData;
+    private readonly string sourcePath;
 
-    private static readonly Lazy<SQLCommandManager> instance = 
-        new Lazy<SQLCommandManager>(() => new SQLCommandManager(pathToSQLCommands));
-    
-    /// <summary>
-    /// Инициализирует менеджера комманд по json файлу с набором комманд
-    /// </summary>
-    /// <param name="filename">путь к json файлу с набором sql команд</param>
-    private SQLCommandManager(string filename)
+    // Ленивая инициализация синглтона
+    private static readonly Lazy<SQLCommandManager> lazy =
+        new(() => new SQLCommandManager(FindSqlCommandsPath()));
+
+    public static SQLCommandManager Instance => lazy.Value;
+
+    private SQLCommandManager(string filePath)
     {
+        sourcePath = filePath;
+
         try
         {
-            string fileContent = File.ReadAllText(filename);
-            JsonDocument doc = JsonDocument.Parse(fileContent);
-            jsonData = doc.RootElement;
+            var jsonText = File.ReadAllText(filePath);
+            using var doc = JsonDocument.Parse(jsonText);
+            jsonData = doc.RootElement.Clone();
         }
-        catch (IOException ex)
+        catch (Exception ex)
         {
-            Console.WriteLine($"SQLCommandManager can't handle json: ${ex.Message}");
-            throw; // Передаем исключение на уровень выше
+            Console.WriteLine($"Ошибка чтения SQLCommands.json: {ex.Message}");
+            throw;
         }
     }
 
     /// <summary>
-    /// Возвращает объект класса
+    /// Выполняет поиск файла SQLCommands.json, поднимаясь вверх от рабочей директории
     /// </summary>
-    public static SQLCommandManager Instance 
+    private static string FindSqlCommandsPath()
     {
-        get { return instance.Value; }
-    }
-    
-    /// <summary>
-    /// Ищет в json файле маппинг по соответствующему имени команды
-    /// </summary>
-    /// <param name="commandName">Имя команды в файле json</param>
-    /// <returns>
-    /// Возвращает строку соответствующего sql запроса,
-    /// если такой запрос не был мапирован, то возвращает пустую строку
-    /// </returns>
-    public string GetCommand(string commandName, params string[] sqlParams)
-    {
-        string sqlCommand = string.Empty;
-        if (jsonData.TryGetProperty(commandName, out JsonElement property))
+        var currentDir = Directory.GetCurrentDirectory();
+
+        while (!string.IsNullOrEmpty(currentDir))
         {
-            sqlCommand = property.GetString() ?? string.Empty;
+            // Проверка пути Assets/SQLCommands.json
+            var candidate = Path.Combine(currentDir, "Assets", "SQLCommands.json");
+            if (File.Exists(candidate))
+                return candidate;
+
+            // Переход к родительской директории
+            var parent = Directory.GetParent(currentDir);
+            if (parent == null)
+                break;
+
+            currentDir = parent.FullName;
         }
-        return TextFormatter.ModifyStr(sqlCommand, sqlParams);
+
+        throw new FileNotFoundException(
+            "Файл SQLCommands.json не найден. Помести его в папку Assets в корне проекта");
+    }
+
+    /// <summary>
+    /// Возвращает SQL-команду по имени
+    /// </summary>
+    public string GetCommand(string commandName)
+    {
+        if (!jsonData.TryGetProperty(commandName, out var property))
+            throw new KeyNotFoundException($"Команда '{commandName}' отсутствует в {sourcePath}");
+
+        return property.GetString() ?? string.Empty;
     }
 }
