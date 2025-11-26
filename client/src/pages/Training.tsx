@@ -10,7 +10,7 @@ function formatPrice(price: number | null) {
 }
 
 // Читаем тип программы по-русски
-function programTypeLabel(type: string) {
+export function programTypeLabel(type: string) {
     if (type === "GROUP") return "Групповая";
     if (type === "PERSONAL") return "Персональная";
     return type;

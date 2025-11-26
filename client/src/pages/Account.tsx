@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
     getUsers,
     getEvents,
@@ -12,10 +13,53 @@ import {
     type ApiPeopleTrainingRow,
     type ApiProgramRow,
 } from "../api/client";
-import { groupUsers } from "./MemberProfile.tsx";
+import type { MemberWithDogs, MemberDog } from "../components/MemberCard";
 import { formatJoined } from "../components/MemberCard";
+import  { programTypeLabel } from "./Training.tsx"
 
-// Форматирование даты события — как в EventCard
+/** Группируем участника + его собак так же, как на странице "Участники" */
+function groupUsers(rows: ApiUserWithDogRow[]): MemberWithDogs[] {
+    const map = new Map<number, MemberWithDogs>();
+
+    for (const row of rows) {
+        let member = map.get(row.memberId);
+        if (!member) {
+            member = {
+                id: row.memberId,
+                fullName: row.fullName,
+                city: row.city,
+                avatar: row.avatarUrl,
+                bio: row.ownerBio ?? undefined,
+                phone: row.phone,
+                email: row.email,
+                joinDate: row.joinDate ?? undefined,
+                membershipEndDate: row.membershipEndDate ?? undefined,
+                dogs: [],
+            };
+            map.set(row.memberId, member);
+        }
+
+        if (row.dogId !== null && row.dogName !== null) {
+            const dog: MemberDog = {
+                id: row.dogId,
+                name: row.dogName,
+                breed: row.breed,
+                sex: row.sex,
+                birthDate: row.birthDate ?? undefined,
+                chipNumber: row.chipNumber ?? undefined,
+                photo: row.dogPhoto ?? undefined,
+                tags: row.dogTags ?? undefined,
+                bio: row.dogBio ?? undefined,
+            };
+            member.dogs.push(dog);
+        }
+    }
+
+    return Array.from(map.values()).sort((a, b) =>
+        a.fullName.localeCompare(b.fullName, "ru")
+    );
+}
+
 function formatEventDate(iso: string) {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "дата не указана";
@@ -30,7 +74,6 @@ function formatEventDate(iso: string) {
     return dtf.format(d).replace(",", "");
 }
 
-// Цена программы
 function formatPrice(price: number | null) {
     if (price == null) return "Цена не указана";
     if (price === 0) return "Бесплатно";
@@ -38,19 +81,24 @@ function formatPrice(price: number | null) {
 }
 
 export default function Account() {
-    // 1. Профиль и собаки
+    // Профиль и собаки
     const [rows, setRows] = useState<ApiUserWithDogRow[]>([]);
     const [loadingProfile, setLoadingProfile] = useState(true);
     const [profileError, setProfileError] = useState<string | null>(null);
 
-    // 2. Данные по тренингам / событиям / программам
-    const [loadingDashboard, setLoadingDashboard] = useState(false);
-    const [dashboardError, setDashboardError] = useState<string | null>(null);
+    // Активность: тренировки, события, программы
+    const [trainingsLoading, setTrainingsLoading] = useState(false);
+    const [eventsLoading, setEventsLoading] = useState(false);
+    const [programsLoading, setProgramsLoading] = useState(false);
+
+    const [trainingsError, setTrainingsError] = useState<string | null>(null);
+    const [eventsError, setEventsError] = useState<string | null>(null);
+    const [programsError, setProgramsError] = useState<string | null>(null);
+
     const [myTrainings, setMyTrainings] = useState<ApiPeopleTrainingRow[]>([]);
     const [myEvents, setMyEvents] = useState<ApiEventRow[]>([]);
     const [myPrograms, setMyPrograms] = useState<ApiProgramRow[]>([]);
 
-    // Загружаем всех участников + их собак
     useEffect(() => {
         let cancelled = false;
 
@@ -62,8 +110,8 @@ export default function Account() {
                 if (cancelled) return;
                 setRows(data);
             })
-            .catch((e) => {
-                console.error(e);
+            .catch((err) => {
+                console.error(err);
                 if (!cancelled) {
                     setProfileError("Не удалось загрузить данные профиля.");
                 }
@@ -79,79 +127,42 @@ export default function Account() {
 
     const members = useMemo(() => groupUsers(rows), [rows]);
 
-    // Пока авторизации нет, берём первого участника как "текущего".
-    // Позже сюда можно подставить id из токена / контекста.
+    // TODO: когда будет авторизация, сюда подставим id из токена/контекста
     const currentMember = members[0] ?? null;
 
-    // Подгружаем личные тренировки / события / программы,
-    // когда профиль участника уже известен.
+    // Загружаем "мою активность", когда знаем текущего пользователя
     useEffect(() => {
         if (!currentMember) return;
 
         let cancelled = false;
 
-        async function loadDashboard() {
+        const dogIds = currentMember.dogs.map((d) => d.id);
+        const now = new Date();
+
+        async function loadTrainings() {
             try {
-                setLoadingDashboard(true);
-                setDashboardError(null);
+                setTrainingsLoading(true);
+                setTrainingsError(null);
 
-                const dogIds = currentMember.dogs.map((d) => d.id);
-                const now = new Date();
+                const allTrainings = await getPeopleTrainings();
+                if (cancelled) return;
 
-                const [allTrainings, allEvents, allPrograms] = await Promise.all([
-                    getPeopleTrainings(), // /api/people_events
-                    getEvents(),          // /api/events
-                    getPrograms(),        // /api/programs
-                ]);
-
-                const upcomingTrainings = allTrainings.filter((t) => {
+                const upcoming = allTrainings.filter((t) => {
                     const start = new Date(t.startAt);
                     return !Number.isNaN(start.getTime()) && start >= now;
                 });
 
-                const upcomingEvents = allEvents.filter((ev) => {
-                    const start = new Date(ev.startAt);
-                    return !Number.isNaN(start.getTime()) && start >= now;
-                });
-
-                // Тренировки для человека: смотрим, есть ли участник в event_members
                 const trainingsWithMe: ApiPeopleTrainingRow[] = [];
+
                 await Promise.all(
-                    upcomingTrainings.map(async (tr) => {
+                    upcoming.map(async (tr) => {
                         try {
                             const members = await getEventMembers(tr.id);
-                            if (members.some((m) => m.memberId === currentMember.id)) {
+                            if (
+                                !cancelled &&
+                                members.some((m) => m.memberId === currentMember.id)
+                            ) {
                                 trainingsWithMe.push(tr);
-                            }
-                        } catch (e) {
-                            console.error(e);
-                        }
-                    })
-                );
-
-                // Общие события (митапы, прогулки и т.п.)
-                const eventsWithMe: ApiEventRow[] = [];
-                await Promise.all(
-                    upcomingEvents.map(async (ev) => {
-                        try {
-                            const members = await getEventMembers(ev.id);
-                            if (members.some((m) => m.memberId === currentMember.id)) {
-                                eventsWithMe.push(ev);
-                            }
-                        } catch (e) {
-                            console.error(e);
-                        }
-                    })
-                );
-
-                // Программы, в которых участвуют собаки владельца:
-                const programsWithMyDogs: ApiProgramRow[] = [];
-                await Promise.all(
-                    allPrograms.map(async (program) => {
-                        try {
-                            const dogs = await getProgramDogs(program.id);
-                            if (dogs.some((d) => dogIds.includes(d.dogId))) {
-                                programsWithMyDogs.push(program);
                             }
                         } catch (e) {
                             console.error(e);
@@ -161,22 +172,107 @@ export default function Account() {
 
                 if (!cancelled) {
                     setMyTrainings(trainingsWithMe);
+                }
+            } catch (e) {
+                console.error(e);
+                if (!cancelled) {
+                    setTrainingsError("Не удалось загрузить тренировки.");
+                }
+            } finally {
+                if (!cancelled) {
+                    setTrainingsLoading(false);
+                }
+            }
+        }
+
+        async function loadEvents() {
+            try {
+                setEventsLoading(true);
+                setEventsError(null);
+
+                const allEvents = await getEvents();
+                if (cancelled) return;
+
+                const upcoming = allEvents.filter((ev) => {
+                    const start = new Date(ev.startAt);
+                    return !Number.isNaN(start.getTime()) && start >= now;
+                });
+
+                const eventsWithMe: ApiEventRow[] = [];
+
+                await Promise.all(
+                    upcoming.map(async (ev) => {
+                        try {
+                            const members = await getEventMembers(ev.id);
+                            if (
+                                !cancelled &&
+                                members.some((m) => m.memberId === currentMember.id)
+                            ) {
+                                eventsWithMe.push(ev);
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    })
+                );
+
+                if (!cancelled) {
                     setMyEvents(eventsWithMe);
+                }
+            } catch (e) {
+                console.error(e);
+                if (!cancelled) {
+                    setEventsError("Не удалось загрузить события.");
+                }
+            } finally {
+                if (!cancelled) {
+                    setEventsLoading(false);
+                }
+            }
+        }
+
+        async function loadPrograms() {
+            try {
+                setProgramsLoading(true);
+                setProgramsError(null);
+
+                const allPrograms = await getPrograms();
+                if (cancelled) return;
+
+                const programsWithMyDogs: ApiProgramRow[] = [];
+
+                await Promise.all(
+                    allPrograms.map(async (program) => {
+                        try {
+                            const dogs = await getProgramDogs(program.id);
+                            if (!cancelled && dogs.some((d) => dogIds.includes(d.dogId))) {
+                                programsWithMyDogs.push(program);
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    })
+                );
+
+                if (!cancelled) {
                     setMyPrograms(programsWithMyDogs);
                 }
             } catch (e) {
                 console.error(e);
                 if (!cancelled) {
-                    setDashboardError("Не удалось загрузить ваши записи и программы.");
+                    setProgramsError("Не удалось загрузить программы.");
                 }
             } finally {
                 if (!cancelled) {
-                    setLoadingDashboard(false);
+                    setProgramsLoading(false);
                 }
             }
         }
 
-        loadDashboard();
+        // запускаем три загрузки параллельно
+        loadTrainings();
+        loadEvents();
+        loadPrograms();
 
         return () => {
             cancelled = true;
@@ -186,7 +282,7 @@ export default function Account() {
     if (loadingProfile && !currentMember) {
         return (
             <section className="px-4 py-8">
-                <p className="text-gray-600">Загружаем личный кабинет…</p>
+                <p className="text-gray-600">Загружаем личный профиль…</p>
             </section>
         );
     }
@@ -215,122 +311,194 @@ export default function Account() {
         );
     }
 
+    const firstName =
+        currentMember.fullName.split(" ")[0] ?? currentMember.fullName;
     const hasDogs = currentMember.dogs.length > 0;
+
+    const stats = {
+        dogs: currentMember.dogs.length,
+        trainings: myTrainings.length,
+        events: myEvents.length,
+        programs: myPrograms.length,
+    };
 
     return (
         <section className="mx-auto flex max-w-5xl flex-1 flex-col px-4 py-8 md:py-10">
-            <header className="mb-6 flex flex-col gap-3 md:mb-8 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        Личный кабинет
-                    </p>
-                    <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
-                        Привет, {currentMember.fullName.split(" ")[0]}!
-                    </h1>
-                    <p className="mt-2 max-w-xl text-sm text-gray-600">
-                        Здесь собрана информация о вас, ваших собаках и записях на тренировки
-                        и мероприятия клуба DogHub.
-                    </p>
-                </div>
-
-                <Link
-                    to={`/members/${currentMember.id}`}
-                    className="inline-flex items-center justify-center rounded-xl border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
-                >
-                    Открыть публичный профиль
-                </Link>
-            </header>
-
-            {dashboardError && (
-                <p className="mb-4 text-xs text-red-600">
-                    {dashboardError}
+            <header className="mb-4 md:mb-6">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Личный кабинет
                 </p>
-            )}
+                <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
+                    Привет, {firstName}!
+                </h1>
+                <p className="mt-2 max-w-xl text-sm text-gray-600">
+                    Здесь собрана информация о вас, ваших собаках и записях на тренировки
+                    и мероприятия клуба DogHub.
+                </p>
+            </header>
+            {/* HERO-блок профиля с градиентом и статистикой */}
+            <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-r from-amber-100 via-orange-100 to-rose-100 p-6 shadow-md md:p-8"
+            >
+                {/* Декоративные пятна */}
+                <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-white/50 blur-3xl" />
+                <div className="pointer-events-none absolute -right-16 top-1/3 h-44 w-44 rounded-full bg-amber-200/60 blur-3xl" />
+                <div className="pointer-events-none absolute inset-x-8 bottom-0 h-20 rounded-3xl bg-white/30 blur-2xl" />
 
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-                {/* Левая колонка: профиль + собаки */}
-                <div className="space-y-6">
-                    {/* Карточка профиля */}
-                    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                        <div className="flex items-start gap-4">
-                            <div className="relative">
-                                {currentMember.avatar ? (
-                                    <img
-                                        src={currentMember.avatar}
-                                        alt={currentMember.fullName}
-                                        className="h-16 w-16 rounded-full object-cover sm:h-20 sm:w-20"
-                                        loading="lazy"
-                                    />
-                                ) : (
-                                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-xl font-semibold text-amber-800 sm:h-20 sm:w-20">
-                                        {currentMember.fullName[0] ?? "?"}
-                                    </div>
-                                )}
-                                <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs text-white shadow-md">
-                                    🐾
+                <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                    <div className="flex flex-1 items-start gap-4">
+                        <div className="relative">
+                            {currentMember.avatar ? (
+                                <img
+                                    src={currentMember.avatar}
+                                    alt={currentMember.fullName}
+                                    className="h-20 w-20 rounded-2xl border border-white/60 object-cover shadow-sm sm:h-24 sm:w-24"
+                                    loading="lazy"
+                                />
+                            ) : (
+                                <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/60 bg-white/70 text-2xl font-semibold text-amber-800 shadow-sm sm:h-24 sm:w-24">
+                                    {currentMember.fullName[0] ?? "?"}
+                                </div>
+                            )}
+                            <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-green-400 text-white shadow-md">
+                                🐾
+                            </span>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h2 className="text-xl font-bold leading-tight text-gray-900 md:text-2xl">
+                                    {currentMember.fullName}
+                                </h2>
+                                <span className="rounded-full bg-black/80 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">
+                                    Участник DogHub
                                 </span>
                             </div>
 
-                            <div className="flex-1 space-y-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <h2 className="text-lg font-semibold leading-tight">
-                                        {currentMember.fullName}
-                                    </h2>
-                                    <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-800">
-                                        Участник клуба
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700">
+                                {currentMember.city && (
+                                    <span className="inline-flex items-center gap-1">
+                                        <span>📍</span>
+                                        <span>{currentMember.city}</span>
                                     </span>
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
-                                    {currentMember.city && (
-                                        <span>📍 {currentMember.city}</span>
-                                    )}
-                                    {currentMember.city && (
-                                        <span className="h-1 w-1 rounded-full bg-gray-300" />
-                                    )}
-                                    <span>В клубе с {formatJoined(currentMember.joinDate)}</span>
-                                </div>
-
-                                {currentMember.bio && (
-                                    <p className="text-sm text-gray-700">{currentMember.bio}</p>
                                 )}
+                                <span className="h-1 w-1 rounded-full bg-gray-400" />
+                                <span>В клубе с {formatJoined(currentMember.joinDate)}</span>
+                            </div>
 
-                                <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                                    {currentMember.email && (
-                                        <span className="rounded-full bg-gray-100 px-2.5 py-1">
-                                            📧 {currentMember.email}
-                                        </span>
-                                    )}
-                                    {currentMember.phone && (
-                                        <span className="rounded-full bg-gray-100 px-2.5 py-1">
-                                            📞 {currentMember.phone}
-                                        </span>
-                                    )}
-                                    <span className="rounded-full bg-gray-100 px-2.5 py-1">
-                                        🎓 Уровень: базовый владелец
+                            {currentMember.bio && (
+                                <p className="max-w-xl text-sm text-gray-800">
+                                    {currentMember.bio}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Быстрая статистика */}
+                    <div className="grid w-full grid-cols-2 gap-3 text-xs text-gray-900 md:w-auto md:grid-cols-2">
+                        <ProfileStat
+                            label="Собаки"
+                            value={stats.dogs}
+                            hint={hasDogs ? "в вашем профиле" : "пока не добавлены"}
+                        />
+                        <ProfileStat
+                            label="Тренировки"
+                            value={stats.trainings}
+                            hint="ближайшие записи"
+                        />
+                        <ProfileStat
+                            label="События"
+                            value={stats.events}
+                            hint="запланированные"
+                        />
+                        <ProfileStat
+                            label="Программы"
+                            value={stats.programs}
+                            hint="для ваших собак"
+                        />
+                    </div>
+                </div>
+
+                {/* Кнопки действий */}
+                <div className="relative mt-5 flex flex-wrap gap-3 text-xs">
+                    <button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded-xl bg-black px-3.5 py-2 font-semibold text-white shadow-sm transition hover:bg-black/90"
+                    >
+                        ✏️ Настроить профиль
+                    </button>
+                    <button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded-xl bg-white/80 px-3.5 py-2 font-medium text-gray-900 shadow-sm transition hover:bg-white"
+                    >
+                        🐶 Добавить собаку
+                    </button>
+                    <Link
+                        to={`/members/${currentMember.id}`}
+                        className="inline-flex items-center justify-center rounded-xl border border-black/10 bg-black/5 px-3.5 py-2 font-medium text-gray-900 shadow-sm transition hover:bg-black/10"
+                    >
+                        Публичный профиль →
+                    </Link>
+                </div>
+            </motion.div>
+
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+                {/* Левая колонка: о себе + собаки */}
+                <motion.section
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: "easeOut", delay: 0.1 }}
+                    className="space-y-6"
+                >
+                    {/* Обо мне и контакты */}
+                    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                        <h2 className="mb-3 text-sm font-semibold text-gray-900">
+                            Обо мне и контакты
+                        </h2>
+                        <div className="space-y-3 text-sm text-gray-700">
+                            {currentMember.bio ? (
+                                <p>{currentMember.bio}</p>
+                            ) : (
+                                <p className="text-gray-500">
+                                    Здесь будет короткая информация о вас. Её можно будет
+                                    отредактировать в настройках профиля.
+                                </p>
+                            )}
+
+                            <div className="grid gap-2 text-xs text-gray-700 sm:grid-cols-2">
+                                {currentMember.email && (
+                                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                                        <span className="text-base">📧</span>
+                                        <span className="truncate">{currentMember.email}</span>
+                                    </div>
+                                )}
+                                {currentMember.phone && (
+                                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                                        <span className="text-base">📞</span>
+                                        <span className="truncate">{currentMember.phone}</span>
+                                    </div>
+                                )}
+                                {currentMember.city && (
+                                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                                        <span className="text-base">📍</span>
+                                        <span className="truncate">{currentMember.city}</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                                    <span className="text-base">🎓</span>
+                                    <span className="truncate">
+                                        Уровень: базовый владелец (для примера)
                                     </span>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div className="mt-4 flex flex-wrap gap-3 text-xs">
-                            <button
-                                type="button"
-                                className="inline-flex items-center justify-center rounded-xl bg-black px-3 py-2 font-semibold text-white shadow-sm transition hover:bg-black/90"
-                            >
-                                Настроить профиль
-                            </button>
-                            <button
-                                type="button"
-                                className="inline-flex items-center justify-center rounded-xl border border-gray-200 px-3 py-2 font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
-                            >
-                                Добавить собаку
-                            </button>
-                        </div>
-                    </section>
-
-                    {/* Карточка с собаками */}
-                    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                    {/* Мои собаки */}
+                    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                         <div className="mb-3 flex items-center justify-between gap-2">
                             <h2 className="text-sm font-semibold text-gray-900">
                                 Мои собаки
@@ -344,18 +512,29 @@ export default function Account() {
 
                         {!hasDogs ? (
                             <p className="text-sm text-gray-500">
-                                У вас пока нет добавленных собак. Нажмите «Добавить собаку», чтобы
-                                создать карточку питомца.
+                                У вас пока нет добавленных собак. Нажмите «Добавить собаку» вверху,
+                                чтобы создать карточку питомца.
                             </p>
                         ) : (
                             <ul className="space-y-3">
                                 {currentMember.dogs.map((dog) => (
                                     <li
                                         key={dog.id}
-                                        className="flex gap-3 rounded-2xl border border-gray-100 px-3 py-2.5 hover:border-amber-200 hover:bg-amber-50/40"
+                                        className="flex gap-3 rounded-2xl border border-gray-100 px-3 py-2.5 transition hover:-translate-y-[1px] hover:border-amber-200 hover:bg-amber-50/40 hover:shadow-sm"
                                     >
-                                        <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-800">
-                                            {dog.name[0]}
+                                        <div className="mt-0.5 h-9 w-9 flex-shrink-0">
+                                            {dog.photo ? (
+                                                <img
+                                                    src={dog.photo}
+                                                    alt={dog.name}
+                                                    className="h-9 w-9 rounded-full object-cover"
+                                                    loading="lazy"
+                                                />
+                                            ) : (
+                                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-800">
+                                                    {dog.name[0]}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between gap-2">
@@ -402,49 +581,61 @@ export default function Account() {
                                 ))}
                             </ul>
                         )}
-                    </section>
-                </div>
+                    </div>
+                </motion.section>
 
-                {/* Правая колонка: тренировки, события, программы */}
-                <div className="space-y-6">
-                    {/* Тренировки владельца (для людей) */}
-                    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                {/* Правая колонка: активность */}
+                <motion.section
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: "easeOut", delay: 0.18 }}
+                    className="space-y-6"
+                >
+                    {/* Ближайшие тренировки */}
+                    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                         <div className="mb-3 flex items-center justify-between gap-2">
                             <h2 className="text-sm font-semibold text-gray-900">
                                 Мои тренировки
                             </h2>
                             <span className="text-[11px] text-gray-500">
-                                {myTrainings.length > 0
-                                    ? `Найдено: ${myTrainings.length}`
-                                    : loadingDashboard
-                                        ? "Загружаем…"
-                                        : "Нет записей"}
+                                {trainingsError
+                                    ? "Ошибка загрузки"
+                                    : myTrainings.length > 0
+                                        ? `Найдено: ${myTrainings.length}`
+                                        : trainingsLoading
+                                            ? "Загружаем…"
+                                            : "Нет записей"}
                             </span>
                         </div>
 
+                        {trainingsError && (
+                            <p className="mb-1 text-[11px] text-red-600">{trainingsError}</p>
+                        )}
+
                         {myTrainings.length === 0 ? (
                             <p className="text-sm text-gray-500">
-                                {loadingDashboard
-                                    ? "Загружаем ваши тренировки…"
-                                    : (
-                                        <>
-                                            У вас пока нет записей на тренировки. Выберите тренинг в разделе{" "}
-                                            <Link
-                                                to="/training"
-                                                className="font-medium text-gray-700 underline-offset-2 hover:underline"
-                                            >
-                                                «Обучение»
-                                            </Link>
-                                            .
-                                        </>
-                                    )}
+                                {trainingsLoading ? (
+                                    "Загружаем ваши тренировки…"
+                                ) : (
+                                    <>
+                                        У вас пока нет записей на тренировки. Выберите тренинг в
+                                        разделе{" "}
+                                        <Link
+                                            to="/training"
+                                            className="font-medium text-gray-700 underline-offset-2 hover:underline"
+                                        >
+                                            «Обучение»
+                                        </Link>
+                                        .
+                                    </>
+                                )}
                             </p>
                         ) : (
                             <ul className="space-y-2.5 text-sm">
                                 {myTrainings.map((tr) => (
                                     <li
                                         key={tr.id}
-                                        className="rounded-2xl border border-gray-100 px-3 py-2 hover:border-amber-200 hover:bg-amber-50/40"
+                                        className="rounded-2xl border border-gray-100 px-3 py-2 transition hover:-translate-y-[1px] hover:border-amber-200 hover:bg-amber-50/40 hover:shadow-sm"
                                     >
                                         <Link to={`/trainings/${tr.id}`} className="block">
                                             <p className="font-medium text-gray-900">
@@ -458,107 +649,122 @@ export default function Account() {
                                 ))}
                             </ul>
                         )}
-                    </section>
+                    </div>
 
-                    {/* Мероприятия */}
-                    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                    {/* События */}
+                    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                         <div className="mb-3 flex items-center justify-between gap-2">
                             <h2 className="text-sm font-semibold text-gray-900">
                                 Мои события
                             </h2>
                             <span className="text-[11px] text-gray-500">
-                                {myEvents.length > 0
-                                    ? `Найдено: ${myEvents.length}`
-                                    : loadingDashboard
-                                        ? "Загружаем…"
-                                        : "Нет записей"}
+                                {eventsError
+                                    ? "Ошибка загрузки"
+                                    : myEvents.length > 0
+                                        ? `Найдено: ${myEvents.length}`
+                                        : eventsLoading
+                                            ? "Загружаем…"
+                                            : "Нет записей"}
                             </span>
                         </div>
 
+                        {eventsError && (
+                            <p className="mb-1 text-[11px] text-red-600">{eventsError}</p>
+                        )}
+
                         {myEvents.length === 0 ? (
                             <p className="text-sm text-gray-500">
-                                {loadingDashboard
-                                    ? "Загружаем ваши события…"
-                                    : (
-                                        <>
-                                            Пока нет запланированных мероприятий. Загляните в раздел{" "}
-                                            <Link
-                                                to="/events"
-                                                className="font-medium text-gray-700 underline-offset-2 hover:underline"
-                                            >
-                                                «События»
-                                            </Link>
-                                            , чтобы записаться.
-                                        </>
-                                    )}
+                                {eventsLoading ? (
+                                    "Загружаем ваши события…"
+                                ) : (
+                                    <>
+                                        Пока нет запланированных мероприятий. Загляните в раздел{" "}
+                                        <Link
+                                            to="/events"
+                                            className="font-medium text-gray-700 underline-offset-2 hover:underline"
+                                        >
+                                            «События»
+                                        </Link>
+                                        , чтобы записаться.
+                                    </>
+                                )}
                             </p>
                         ) : (
                             <ul className="space-y-2.5 text-sm">
                                 {myEvents.map((ev) => (
                                     <li
                                         key={ev.id}
-                                        className="rounded-2xl border border-gray-100 px-3 py-2 hover:border-amber-200 hover:bg-amber-50/40"
+                                        className="rounded-2xl border border-gray-100 px-3 py-2 transition hover:-translate-y-[1px] hover:border-amber-200 hover:bg-amber-50/40 hover:shadow-sm"
                                     >
                                         <Link to={`/events/${ev.id}`} className="block">
-                                            <p className="font-medium text-gray-900">
-                                                {ev.title}
-                                            </p>
+                                            <p className="font-medium text-gray-900">{ev.title}</p>
                                             <p className="mt-0.5 text-xs text-gray-600">
                                                 🗓️ {formatEventDate(ev.startAt)} • 📍 {ev.venue}
                                             </p>
+                                            {ev.description && (
+                                                <p className="mt-1 text-xs text-gray-700">
+                                                    {ev.description}
+                                                </p>
+                                            )}
                                         </Link>
                                     </li>
                                 ))}
                             </ul>
                         )}
-                    </section>
+                    </div>
 
-                    {/* Программы для собак */}
-                    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                    {/* Программы */}
+                    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                         <div className="mb-3 flex items-center justify-between gap-2">
                             <h2 className="text-sm font-semibold text-gray-900">
                                 Программы для моих собак
                             </h2>
                             <span className="text-[11px] text-gray-500">
-                                {myPrograms.length > 0
-                                    ? `Найдено: ${myPrograms.length}`
-                                    : loadingDashboard
-                                        ? "Загружаем…"
-                                        : "Нет активных программ"}
+                                {programsError
+                                    ? "Ошибка загрузки"
+                                    : myPrograms.length > 0
+                                        ? `Найдено: ${myPrograms.length}`
+                                        : programsLoading
+                                            ? "Загружаем…"
+                                            : "Нет активных программ"}
                             </span>
                         </div>
 
+                        {programsError && (
+                            <p className="mb-1 text-[11px] text-red-600">{programsError}</p>
+                        )}
+
                         {myPrograms.length === 0 ? (
                             <p className="text-sm text-gray-500">
-                                {loadingDashboard
-                                    ? "Загружаем программы…"
-                                    : (
-                                        <>
-                                            Активные программы пока не найдены. Выберите подходящий курс в
-                                            разделе{" "}
-                                            <Link
-                                                to="/training"
-                                                className="font-medium text-gray-700 underline-offset-2 hover:underline"
-                                            >
-                                                «Обучение»
-                                            </Link>
-                                            .
-                                        </>
-                                    )}
+                                {programsLoading ? (
+                                    "Загружаем программы…"
+                                ) : (
+                                    <>
+                                        Активные программы пока не найдены. Выберите подходящий курс в
+                                        разделе{" "}
+                                        <Link
+                                            to="/training"
+                                            className="font-medium text-gray-700 underline-offset-2 hover:underline"
+                                        >
+                                            «Обучение»
+                                        </Link>
+                                        .
+                                    </>
+                                )}
                             </p>
                         ) : (
                             <ul className="space-y-2.5 text-sm">
                                 {myPrograms.map((program) => (
                                     <li
                                         key={program.id}
-                                        className="rounded-2xl border border-gray-100 px-3 py-2 hover:border-amber-200 hover:bg-amber-50/40"
+                                        className="rounded-2xl border border-gray-100 px-3 py-2 transition hover:-translate-y-[1px] hover:border-amber-200 hover:bg-amber-50/40 hover:shadow-sm"
                                     >
                                         <Link to={`/programs/${program.id}`} className="block">
                                             <p className="font-medium text-gray-900">
                                                 {program.title}
                                             </p>
                                             <p className="mt-0.5 text-xs text-gray-600">
-                                                Тип: {program.type} • Участников:{" "}
+                                                Тип: {programTypeLabel(program.type)} • Участников:{" "}
                                                 {program.registeredDogsCount}
                                             </p>
                                             <p className="mt-0.5 text-xs text-gray-500">
@@ -569,9 +775,24 @@ export default function Account() {
                                 ))}
                             </ul>
                         )}
-                    </section>
-                </div>
+                    </div>
+                </motion.section>
             </div>
         </section>
+    );
+}
+
+function ProfileStat(props: { label: string; value: number; hint?: string }) {
+    const { label, value, hint } = props;
+    return (
+        <div className="flex flex-col rounded-2xl bg-white/80 px-3 py-2 shadow-sm backdrop-blur">
+            <span className="text-[11px] font-medium text-gray-500">{label}</span>
+            <span className="text-lg font-semibold text-gray-900">{value}</span>
+            {hint && (
+                <span className="mt-0.5 text-[10px] text-gray-500">
+                    {hint}
+                </span>
+            )}
+        </div>
     );
 }
