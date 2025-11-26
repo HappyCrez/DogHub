@@ -18,8 +18,6 @@ public class EventsController : ControllerBase
         _sql = sql;
     }
 
-    // ---------- УЖЕ БЫЛО ----------
-
     // GET /events
     [HttpGet]
     public IActionResult GetEvents()
@@ -34,7 +32,7 @@ public class EventsController : ControllerBase
     public IActionResult GetEvent(int id)
     {
         string sqlText = _sql.GetCommand("event");
-        var parameters = new Dictionary<string, object>
+        var parameters = new Dictionary<string, object?>
         {
             ["id"] = id
         };
@@ -42,42 +40,43 @@ public class EventsController : ControllerBase
         return Content(json, "application/json");
     }
 
-    // GET /events/education
+    // GET /events/{eventId}/dogs  и /event_dogs/{eventId}
+    [HttpGet("{eventId:int}/dogs")]
+    [HttpGet("/event_dogs/{eventId:int}")]
+    public IActionResult GetEventDogs(int eventId)
+    {
+        string sqlText = _sql.GetCommand("event_dogs");
+        var parameters = new Dictionary<string, object?>
+        {
+            ["event_id"] = eventId
+        };
+        string json = _db.ExecuteSQL(sqlText, parameters);
+        return Content(json, "application/json");
+    }
+
+    // GET /events/{eventId}/members  и /event_members/{eventId}
+    [HttpGet("{eventId:int}/members")]
+    [HttpGet("/event_members/{eventId:int}")]
+    public IActionResult GetEventMembers(int eventId)
+    {
+        string sqlText = _sql.GetCommand("event_members");
+        var parameters = new Dictionary<string, object?>
+        {
+            ["event_id"] = eventId
+        };
+        string json = _db.ExecuteSQL(sqlText, parameters);
+        return Content(json, "application/json");
+    }
+
+    // GET /events/education  и /people_events
     [HttpGet("education")]
+    [HttpGet("/people_events")]
     public IActionResult GetEducationEvents()
     {
         string sqlText = _sql.GetCommand("people_events");
         string json = _db.ExecuteSQL(sqlText);
         return Content(json, "application/json");
     }
-
-    // GET /events/{eventId}/dogs
-    [HttpGet("{eventId:int}/dogs")]
-    public IActionResult GetEventDogs(int eventId)
-    {
-        string sqlText = _sql.GetCommand("event_dogs");
-        var parameters = new Dictionary<string, object>
-        {
-            ["event_id"] = eventId
-        };
-        string json = _db.ExecuteSQL(sqlText, parameters);
-        return Content(json, "application/json");
-    }
-
-    // GET /events/{eventId}/members
-    [HttpGet("{eventId:int}/members")]
-    public IActionResult GetEventMembers(int eventId)
-    {
-        string sqlText = _sql.GetCommand("event_members");
-        var parameters = new Dictionary<string, object>
-        {
-            ["event_id"] = eventId
-        };
-        string json = _db.ExecuteSQL(sqlText, parameters);
-        return Content(json, "application/json");
-    }
-
-    // ---------- НОВОЕ: СОЗДАНИЕ СОБЫТИЯ ----------
 
     // POST /events
     [HttpPost]
@@ -89,7 +88,7 @@ public class EventsController : ControllerBase
 
         foreach (var prop in body.EnumerateObject())
         {
-            var column = prop.Name; // title, category, start_at, end_at, venue, price, description, ...
+            var column = prop.Name;
             columns.Add(column);
             placeholders.Add("@" + column);
             parameters[column] = ConvertJsonValue(prop.Value);
@@ -104,8 +103,6 @@ public class EventsController : ControllerBase
         var json = _db.ExecuteSQL(sql, parameters);
         return Content(json, "application/json");
     }
-
-    // ---------- НОВОЕ: ОБНОВЛЕНИЕ СОБЫТИЯ ----------
 
     // PUT /events/{id}
     [HttpPut("{id:int}")]
@@ -133,8 +130,6 @@ public class EventsController : ControllerBase
         var json = _db.ExecuteSQL(sql, parameters);
         return Content(json, "application/json");
     }
-
-    // ---------- НОВОЕ: УДАЛЕНИЕ СОБЫТИЯ ----------
 
     // DELETE /events/{id}
     [HttpDelete("{id:int}")]

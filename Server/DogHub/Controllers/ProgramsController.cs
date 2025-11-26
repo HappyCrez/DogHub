@@ -37,13 +37,19 @@ public class ProgramsController : ControllerBase
     }
 
     // Получение списка собак, подключённых к программе
+    // GET /programs/{programId}/dogs и /program_dogs/{programId}
     [HttpGet("{programId:int}/dogs")]
+    [HttpGet("/program_dogs/{programId:int}")]
     public IActionResult GetProgramDogs(int programId)
     {
         try
         {
             string sql = _sql.GetCommand("program_dogs");
-            var parameters = new Dictionary<string, object> { ["program_id"] = programId };
+            var parameters = new Dictionary<string, object?>
+            {
+                ["program_id"] = programId
+            };
+
             string json = _db.ExecuteSQL(sql, parameters);
             return Content(json, "application/json");
         }

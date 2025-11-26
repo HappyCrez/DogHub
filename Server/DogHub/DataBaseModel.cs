@@ -81,7 +81,7 @@ public class DataBaseModel
     }
 
     // Добавляет параметры в SQL-команду
-    private static void AddParameters(NpgsqlCommand command, IDictionary<string, object>? parameters)
+    private static void AddParameters(NpgsqlCommand command, IDictionary<string, object?>? parameters)
     {
         if (parameters == null) return;
 
