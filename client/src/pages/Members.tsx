@@ -5,7 +5,7 @@ import MemberCard, {
 } from "../components/MemberCard";
 import { getUsers, type ApiUserWithDogRow } from "../api/client";
 
-function groupUsers(rows: ApiUserWithDogRow[]): MemberWithDogs[] {
+export function groupUsers(rows: ApiUserWithDogRow[]): MemberWithDogs[] {
     const map = new Map<number, MemberWithDogs>();
 
     for (const row of rows) {
