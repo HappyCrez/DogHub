@@ -8,57 +8,15 @@ import {
     getPrograms,
     getProgramDogs,
     getEventMembers,
+    getEventDogs,
     type ApiUserWithDogRow,
     type ApiEventRow,
     type ApiPeopleTrainingRow,
     type ApiProgramRow,
 } from "../api/client";
-import type { MemberWithDogs, MemberDog } from "../components/MemberCard";
 import { formatJoined } from "../components/MemberCard";
 import  { programTypeLabel } from "./Training.tsx"
-
-/** Группируем участника + его собак так же, как на странице "Участники" */
-function groupUsers(rows: ApiUserWithDogRow[]): MemberWithDogs[] {
-    const map = new Map<number, MemberWithDogs>();
-
-    for (const row of rows) {
-        let member = map.get(row.memberId);
-        if (!member) {
-            member = {
-                id: row.memberId,
-                fullName: row.fullName,
-                city: row.city,
-                avatar: row.avatarUrl,
-                bio: row.ownerBio ?? undefined,
-                phone: row.phone,
-                email: row.email,
-                joinDate: row.joinDate ?? undefined,
-                membershipEndDate: row.membershipEndDate ?? undefined,
-                dogs: [],
-            };
-            map.set(row.memberId, member);
-        }
-
-        if (row.dogId !== null && row.dogName !== null) {
-            const dog: MemberDog = {
-                id: row.dogId,
-                name: row.dogName,
-                breed: row.breed,
-                sex: row.sex,
-                birthDate: row.birthDate ?? undefined,
-                chipNumber: row.chipNumber ?? undefined,
-                photo: row.dogPhoto ?? undefined,
-                tags: row.dogTags ?? undefined,
-                bio: row.dogBio ?? undefined,
-            };
-            member.dogs.push(dog);
-        }
-    }
-
-    return Array.from(map.values()).sort((a, b) =>
-        a.fullName.localeCompare(b.fullName, "ru")
-    );
-}
+import  { groupUsers } from "./Members.tsx"
 
 function formatEventDate(iso: string) {
     const d = new Date(iso);
@@ -128,7 +86,7 @@ export default function Account() {
     const members = useMemo(() => groupUsers(rows), [rows]);
 
     // TODO: когда будет авторизация, сюда подставим id из токена/контекста
-    const currentMember = members[0] ?? null;
+    const currentMember = members[7] ?? null;
 
     // Загружаем "мою активность", когда знаем текущего пользователя
     useEffect(() => {
@@ -193,22 +151,25 @@ export default function Account() {
                 const allEvents = await getEvents();
                 if (cancelled) return;
 
-                const upcoming = allEvents.filter((ev) => {
+                const eventsWithMyDogs: ApiEventRow[] = [];
+
+                const now = new Date();
+                const relevantEvents = allEvents.filter((ev) => {
                     const start = new Date(ev.startAt);
                     return !Number.isNaN(start.getTime()) && start >= now;
                 });
 
-                const eventsWithMe: ApiEventRow[] = [];
-
                 await Promise.all(
-                    upcoming.map(async (ev) => {
+                    relevantEvents.map(async (ev) => {
                         try {
-                            const members = await getEventMembers(ev.id);
-                            if (
-                                !cancelled &&
-                                members.some((m) => m.memberId === currentMember.id)
-                            ) {
-                                eventsWithMe.push(ev);
+                            const dogs = await getEventDogs(ev.id);
+
+                            const hasMyDog = dogs.some((d) =>
+                                dogIds.includes(d.dogId)
+                            );
+
+                            if (!cancelled && hasMyDog) {
+                                eventsWithMyDogs.push(ev);
                             }
                         } catch (e) {
                             console.error(e);
@@ -217,7 +178,7 @@ export default function Account() {
                 );
 
                 if (!cancelled) {
-                    setMyEvents(eventsWithMe);
+                    setMyEvents(eventsWithMyDogs);
                 }
             } catch (e) {
                 console.error(e);
