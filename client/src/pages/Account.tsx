@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
     getUsers,
@@ -15,8 +15,9 @@ import {
     type ApiProgramRow,
 } from "../api/client";
 import { formatJoined } from "../components/MemberCard";
-import  { programTypeLabel } from "./Training.tsx"
-import  { groupUsers } from "./Members.tsx"
+import { programTypeLabel } from "./Training.tsx";
+import { groupUsers } from "./Members.tsx";
+import { useAuth } from "../auth/AuthContext";
 
 function formatEventDate(iso: string) {
     const d = new Date(iso);
@@ -85,16 +86,59 @@ export default function Account() {
 
     const members = useMemo(() => groupUsers(rows), [rows]);
 
-    // TODO: когда будет авторизация, сюда подставим id из токена/контекста
-    const currentMember = members[7] ?? null;
+    // Достаём пользователя из контекста авторизации
+    const { user: authUser, isAuthenticated } = useAuth();
+
+    // Определяем id участника из объекта user, который вернул бэкенд
+    const currentMemberId = useMemo(() => {
+        if (!authUser) return null;
+
+        const anyUser = authUser as any;
+
+        // На всякий случай проверяем несколько вариантов имён поля
+        let rawId: unknown =
+            anyUser.memberId ??
+            anyUser.member_id ??
+            anyUser.id;
+
+        if (typeof rawId === "string") {
+            const n = Number(rawId);
+            return Number.isNaN(n) ? null : n;
+        }
+
+        if (typeof rawId === "number") {
+            return rawId;
+        }
+
+        return null;
+    }, [authUser]);
+
+    // Ищем участника с таким id в сгруппированном списке
+    const currentMember = useMemo(() => {
+        if (members.length === 0) return null;
+
+        if (currentMemberId == null) {
+            // Фоллбэк: если по какой-то причине id не нашли,
+            // оставляем старое поведение — первый участник
+            return members[0];
+        }
+
+        return (
+            members.find((m) => m.id === currentMemberId) ??
+            members[0]
+        );
+    }, [members, currentMemberId]);
 
     // Загружаем "мою активность", когда знаем текущего пользователя
     useEffect(() => {
         if (!currentMember) return;
 
+        // Фиксируем не-nullовый currentMember в локальной константе
+        const member = currentMember;
+
         let cancelled = false;
 
-        const dogIds = currentMember.dogs.map((d) => d.id);
+        const dogIds = member.dogs.map((d) => d.id);
         const now = new Date();
 
         async function loadTrainings() {
@@ -118,7 +162,7 @@ export default function Account() {
                             const members = await getEventMembers(tr.id);
                             if (
                                 !cancelled &&
-                                members.some((m) => m.memberId === currentMember.id)
+                                members.some((m) => m.memberId === member.id)
                             ) {
                                 trainingsWithMe.push(tr);
                             }
@@ -239,6 +283,12 @@ export default function Account() {
             cancelled = true;
         };
     }, [currentMember]);
+
+    // === ГАРД АВТОРИЗАЦИИ ===
+    // Если пользователь не залогинен, страница ЛК недоступна — отправляем на /auth
+    if (!isAuthenticated) {
+        return <Navigate to="/auth" replace />;
+    }
 
     if (loadingProfile && !currentMember) {
         return (
