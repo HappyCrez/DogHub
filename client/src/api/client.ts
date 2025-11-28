@@ -32,7 +32,7 @@ export function getEvents(): Promise<ApiEventRow[]> {
 }
 
 export async function getEvent(id: number): Promise<ApiEventRow | null> {
-    const rows = await getJson<ApiEventRow[]>(`/event/${id}`);
+    const rows = await getJson<ApiEventRow[]>(`/events/${id}`);
     return rows[0] ?? null;
 }
 
