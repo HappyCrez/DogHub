@@ -32,6 +32,7 @@ CREATE TABLE "member" (
   "join_date" date,
   "membership_end_date" date,
   "role" varchar(40) NOT NULL
+  "password_hash" text
 );
 
 CREATE TABLE "application" (

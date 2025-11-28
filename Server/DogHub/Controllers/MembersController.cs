@@ -22,6 +22,7 @@ public class MembersController : ControllerBase
 
     // Получение списка участников
     [HttpGet]
+    [AllowAnonymous]
     public IActionResult GetMembers()
     {
         try
@@ -39,6 +40,7 @@ public class MembersController : ControllerBase
 
     // Создание нового участника
     [HttpPost]
+    [Authorize(Roles = "Админ")]
     public IActionResult CreateMember([FromBody] JsonElement body)
     {
         try
@@ -76,6 +78,7 @@ public class MembersController : ControllerBase
 
     // Обновление участника
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Админ")]
     public IActionResult UpdateMember(int id, [FromBody] JsonElement body)
     {
         try
@@ -117,6 +120,7 @@ public class MembersController : ControllerBase
 
     // Удаление участника
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Админ")]
     public IActionResult DeleteMember(int id)
     {
         try
