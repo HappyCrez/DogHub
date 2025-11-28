@@ -13,11 +13,13 @@ public class AuthController : ControllerBase
 {
     private readonly DataBaseModel _db;
     private readonly SQLCommandManager _sql;
+    private readonly TokenService _tokenService;
 
-    public AuthController(DataBaseModel db, SQLCommandManager sql)
+    public AuthController(DataBaseModel db, SQLCommandManager sql, TokenService tokenService)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _sql = sql ?? throw new ArgumentNullException(nameof(sql));
+        _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
     }
 
     // POST /auth/register
@@ -26,7 +28,6 @@ public class AuthController : ControllerBase
     {
         try
         {
-            // читаем обязательные поля
             if (!body.TryGetProperty("fullName", out var fullNameProp) ||
                 !body.TryGetProperty("email", out var emailProp) ||
                 !body.TryGetProperty("passwordHash", out var passProp))
@@ -48,7 +49,7 @@ public class AuthController : ControllerBase
                 return BadRequest(new { error = "fullName, email и passwordHash не могут быть пустыми" });
             }
 
-            // 1. проверка, что такого email ещё нет
+            // 1. проверка уникальности email
             var checkSql = _sql.GetCommand("get_member_by_email");
             var checkParams = new Dictionary<string, object?>
             {
@@ -59,8 +60,8 @@ public class AuthController : ControllerBase
 
             if (!string.IsNullOrWhiteSpace(existingJson))
             {
-                using var doc = JsonDocument.Parse(existingJson);
-                var root = doc.RootElement;
+                using var existingDoc = JsonDocument.Parse(existingJson);
+                var root = existingDoc.RootElement;
                 if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
                 {
                     return Conflict(new { error = "Пользователь с таким email уже существует" });
@@ -70,31 +71,64 @@ public class AuthController : ControllerBase
             // 2. серверный хэш поверх клиентского (bcrypt со своей солью)
             var serverHash = BCryptNet.HashPassword(clientPasswordHash);
 
-            // 3. создаём участника
+            // 3. вставка участника (без RETURNING)
             var insertSql = _sql.GetCommand("insert_member_for_auth");
             var insertParams = new Dictionary<string, object?>
             {
-                ["full_name"]      = fullName,
-                ["phone"]          = phone,
-                ["email"]          = email,
-                ["city"]           = city,
-                ["password_hash"]  = serverHash
+                ["full_name"]     = fullName,
+                ["phone"]         = phone,
+                ["email"]         = email,
+                ["city"]          = city,
+                ["password_hash"] = serverHash
             };
 
-            var insertedJson = _db.ExecuteSQL(insertSql, insertParams);
+            var insertResult = _db.ExecuteSQL(insertSql, insertParams);
 
-            if (string.IsNullOrWhiteSpace(insertedJson))
+            if (string.IsNullOrWhiteSpace(insertResult))
+            {
                 return StatusCode(500, new { error = "Не удалось создать пользователя" });
+            }
 
-            using var insertedDoc = JsonDocument.Parse(insertedJson);
-            var rootInserted = insertedDoc.RootElement;
+            // 4. читаем пользователя по email
+            var userJson = _db.ExecuteSQL(checkSql, checkParams);
 
-            if (rootInserted.ValueKind != JsonValueKind.Array || rootInserted.GetArrayLength() == 0)
-                return StatusCode(500, new { error = "Не удалось создать пользователя" });
+            if (string.IsNullOrWhiteSpace(userJson))
+            {
+                return StatusCode(500, new { error = "Пользователь создан, но не найден при чтении" });
+            }
 
-            var user = rootInserted[0]; // там уже нет password_hash в RETURNING
+            using var userDoc = JsonDocument.Parse(userJson);
+            var userRoot = userDoc.RootElement;
 
-            return Ok(new { user });
+            if (userRoot.ValueKind != JsonValueKind.Array || userRoot.GetArrayLength() == 0)
+            {
+                return StatusCode(500, new { error = "Пользователь создан, но не найден при чтении" });
+            }
+
+            var userElement = userRoot[0];
+
+            // формируем обычный словарь без passwordHash
+            var userDict = new Dictionary<string, object?>();
+
+            foreach (var prop in userElement.EnumerateObject())
+            {
+                if (prop.NameEquals("passwordHash"))
+                    continue;
+
+                object? value = prop.Value.ValueKind switch
+                {
+                    JsonValueKind.String => prop.Value.GetString(),
+                    JsonValueKind.Number => prop.Value.TryGetInt64(out var l) ? l : prop.Value.GetDouble(),
+                    JsonValueKind.True   => true,
+                    JsonValueKind.False  => false,
+                    JsonValueKind.Null   => null,
+                    _ => prop.Value.GetRawText()
+                };
+
+                userDict[prop.Name] = value;
+            }
+
+            return Ok(new { user = userDict });
         }
         catch (Exception ex)
         {
@@ -102,6 +136,7 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { error = "Ошибка при регистрации пользователя" });
         }
     }
+
 
     // POST /auth/login
     [HttpPost("login")]
@@ -123,7 +158,6 @@ public class AuthController : ControllerBase
                 return BadRequest(new { error = "email и passwordHash не могут быть пустыми" });
             }
 
-            // ищем участника по email
             var sql = _sql.GetCommand("get_member_by_email");
             var parameters = new Dictionary<string, object?>
             {
@@ -134,8 +168,7 @@ public class AuthController : ControllerBase
 
             if (string.IsNullOrWhiteSpace(json))
             {
-                // ошибка БД
-                return StatusCode(500, new { error = "Ошибка при обращении к базе данных" });
+                return Unauthorized(new { error = "Неверный email или пароль" });
             }
 
             using var doc = JsonDocument.Parse(json);
@@ -156,14 +189,13 @@ public class AuthController : ControllerBase
 
             var storedHash = storedPassProp.GetString();
 
-            // проверяем bcrypt’ом
             if (string.IsNullOrEmpty(storedHash) ||
                 !BCryptNet.Verify(clientPasswordHash, storedHash))
             {
                 return Unauthorized(new { error = "Неверный email или пароль" });
             }
 
-            // собираем объект пользователя без passwordHash
+            // собрать user без passwordHash
             var result = new Dictionary<string, object?>();
 
             foreach (var prop in userElement.EnumerateObject())
@@ -171,7 +203,6 @@ public class AuthController : ControllerBase
                 if (prop.NameEquals("passwordHash"))
                     continue;
 
-                // аккуратно приводим значения
                 object? value = prop.Value.ValueKind switch
                 {
                     JsonValueKind.String => prop.Value.GetString(),
@@ -185,8 +216,14 @@ public class AuthController : ControllerBase
                 result[prop.Name] = value;
             }
 
-            // пока без JWT, просто возвращаем user
-            return Ok(new { user = result });
+            var (accessToken, expiresAt) = _tokenService.GenerateAccessToken(userElement);
+
+            return Ok(new
+            {
+                accessToken,
+                accessTokenExpiresAt = expiresAt,
+                user = result
+            });
         }
         catch (Exception ex)
         {
