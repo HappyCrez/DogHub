@@ -22,6 +22,17 @@ public class AppConfig
     private readonly string mailFilePath;
     private readonly string mailTimeout;
 
+    // Параметры JWT
+    private readonly string jwtIssuer;
+    private readonly string jwtAudience;
+    private readonly string jwtSecret;
+    private readonly int accessTokenLifetimeMinutes;
+
+    public string JwtIssuer => jwtIssuer;
+    public string JwtAudience => jwtAudience;
+    public string JwtSecret => jwtSecret;
+    public TimeSpan AccessTokenLifetime => TimeSpan.FromMinutes(accessTokenLifetimeMinutes);
+
     private AppConfig(
         string dbHost,
         string dbPort,
@@ -31,7 +42,11 @@ public class AppConfig
         string mailUser,
         string mailPassword,
         string mailFilePath,
-        string mailTimeout)
+        string mailTimeout,
+        string jwtIssuer,
+        string jwtAudience,
+        string jwtSecret,
+        int accessTokenLifetimeMinutes)
     {
         this.dbHost = dbHost;
         this.dbPort = dbPort;
@@ -43,6 +58,11 @@ public class AppConfig
         this.mailPassword = mailPassword;
         this.mailFilePath = mailFilePath;
         this.mailTimeout = mailTimeout;
+
+        this.jwtIssuer = jwtIssuer;
+        this.jwtAudience = jwtAudience;
+        this.jwtSecret = jwtSecret;
+        this.accessTokenLifetimeMinutes = accessTokenLifetimeMinutes;
     }
 
     /// <summary>
@@ -101,6 +121,17 @@ public class AppConfig
         // Чтение таймаута
         string mailTimeout = Environment.GetEnvironmentVariable("MAIL_TIMEOUT") ?? "300";
 
+        // JWT
+        string jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "DogHubApi";
+        string jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "DogHubClient";
+        string jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
+            ?? throw new InvalidOperationException("JWT_SECRET is not set");
+        int accessTokenLifetimeMinutes = int.TryParse(
+            Environment.GetEnvironmentVariable("ACCESS_TOKEN_LIFETIME_MINUTES"),
+            out var minutes)
+            ? minutes
+            : 30;
+
         // Директория, из которой загружен файл .env
         var envDir = Path.GetDirectoryName(envPath)
                      ?? throw new InvalidOperationException("Не удалось определить директорию .env");
@@ -112,7 +143,8 @@ public class AppConfig
 
         return new AppConfig(
             dbHost, dbPort, dbUser, dbName, dbPassword,
-            mailUser, mailPassword, mailFilePath, mailTimeout);
+            mailUser, mailPassword, mailFilePath, mailTimeout,
+            jwtIssuer, jwtAudience, jwtSecret, accessTokenLifetimeMinutes);
     }
 
     /// <summary>
