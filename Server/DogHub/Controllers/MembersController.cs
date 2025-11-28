@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Collections.Generic;
 using DogHub;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DogHub.Controllers;
 
@@ -162,6 +163,68 @@ public class MembersController : ControllerBase
 
             default:
                 return element.GetRawText();
+        }
+    }
+
+    // Смена роли участника (Пользователь / Тренер / Админ)
+    [HttpPost("{id:int}/role")]
+    [Authorize(Roles = "Админ")]
+    public IActionResult ChangeMemberRole(int id, [FromBody] JsonElement body)
+    {
+        try
+        {
+            if (!body.TryGetProperty("role", out var roleProp) ||
+                roleProp.ValueKind != JsonValueKind.String)
+            {
+                return BadRequest(new { error = "Нужно передать поле role" });
+            }
+
+            var role = roleProp.GetString()?.Trim();
+
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                return BadRequest(new { error = "role не может быть пустой" });
+            }
+
+            var parameters = new Dictionary<string, object?>
+            {
+                ["id"] = id,
+                ["role"] = role
+            };
+
+            // Обновляем роль
+            var updateSql = "UPDATE member SET role = @role WHERE id = @id;";
+            var updateJson = _db.ExecuteSQL(updateSql, parameters);
+
+            if (string.IsNullOrWhiteSpace(updateJson))
+            {
+                return StatusCode(500, new { error = "Ошибка при обновлении роли" });
+            }
+
+            if (updateJson.Contains("Затронуто строк: 0", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(new { error = "Участник с таким id не найден" });
+            }
+
+            // Читаем обновлённого участника
+            var selectSql =
+                "SELECT id AS member_id, full_name, phone, email, city, avatar_url, bio AS owner_bio, " +
+                "join_date, membership_end_date, role " +
+                "FROM member WHERE id = @id;";
+
+            var memberJson = _db.ExecuteSQL(selectSql, new Dictionary<string, object?> { ["id"] = id });
+
+            if (string.IsNullOrWhiteSpace(memberJson))
+            {
+                return StatusCode(500, new { error = "Роль обновлена, но данные участника не найдены" });
+            }
+
+            return Content(memberJson, "application/json");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ChangeMemberRole] {ex}");
+            return StatusCode(500, new { error = "Ошибка при смене роли участника" });
         }
     }
 }

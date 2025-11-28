@@ -49,7 +49,7 @@ public class AuthController : ControllerBase
                 return BadRequest(new { error = "fullName, email и passwordHash не могут быть пустыми" });
             }
 
-            // 1. проверка уникальности email
+            // Проверка уникальности email
             var checkSql = _sql.GetCommand("get_member_by_email");
             var checkParams = new Dictionary<string, object?>
             {
@@ -68,10 +68,10 @@ public class AuthController : ControllerBase
                 }
             }
 
-            // 2. серверный хэш поверх клиентского (bcrypt со своей солью)
+            // Серверный хэш поверх клиентского (bcrypt со своей солью)
             var serverHash = BCryptNet.HashPassword(clientPasswordHash);
 
-            // 3. вставка участника (без RETURNING)
+            // Вставка участника
             var insertSql = _sql.GetCommand("insert_member_for_auth");
             var insertParams = new Dictionary<string, object?>
             {
@@ -89,7 +89,7 @@ public class AuthController : ControllerBase
                 return StatusCode(500, new { error = "Не удалось создать пользователя" });
             }
 
-            // 4. читаем пользователя по email
+            // Читаем пользователя по email
             var userJson = _db.ExecuteSQL(checkSql, checkParams);
 
             if (string.IsNullOrWhiteSpace(userJson))
@@ -107,7 +107,7 @@ public class AuthController : ControllerBase
 
             var userElement = userRoot[0];
 
-            // формируем обычный словарь без passwordHash
+            // Формируем обычный словарь без passwordHash
             var userDict = new Dictionary<string, object?>();
 
             foreach (var prop in userElement.EnumerateObject())
@@ -195,7 +195,7 @@ public class AuthController : ControllerBase
                 return Unauthorized(new { error = "Неверный email или пароль" });
             }
 
-            // собрать user без passwordHash
+            // Собрать user без passwordHash
             var result = new Dictionary<string, object?>();
 
             foreach (var prop in userElement.EnumerateObject())
