@@ -21,6 +21,7 @@ public class ProgramsController : ControllerBase
 
     // Получение списка программ
     [HttpGet]
+    [AllowAnonymous]
     public IActionResult GetPrograms()
     {
         try
@@ -40,6 +41,7 @@ public class ProgramsController : ControllerBase
     // GET /programs/{programId}/dogs и /program_dogs/{programId}
     [HttpGet("{programId:int}/dogs")]
     [HttpGet("/program_dogs/{programId:int}")]
+    [AllowAnonymous]
     public IActionResult GetProgramDogs(int programId)
     {
         try
@@ -62,6 +64,7 @@ public class ProgramsController : ControllerBase
 
     // Создание новой программы
     [HttpPost]
+    [Authorize(Roles = "Админ")]
     public IActionResult CreateProgram([FromBody] JsonElement body)
     {
         try
@@ -99,6 +102,7 @@ public class ProgramsController : ControllerBase
 
     // Обновление программы
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Админ")]
     public IActionResult UpdateProgram(int id, [FromBody] JsonElement body)
     {
         try
@@ -140,6 +144,7 @@ public class ProgramsController : ControllerBase
 
     // Удаление программы
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Админ")]
     public IActionResult DeleteProgram(int id)
     {
         try

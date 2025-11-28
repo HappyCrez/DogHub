@@ -20,6 +20,7 @@ public class EventsController : ControllerBase
 
     // GET /events
     [HttpGet]
+    [AllowAnonymous]
     public IActionResult GetEvents()
     {
         string sqlText = _sql.GetCommand("events");
@@ -29,6 +30,7 @@ public class EventsController : ControllerBase
 
     // GET /events/{id}
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     public IActionResult GetEvent(int id)
     {
         string sqlText = _sql.GetCommand("event");
@@ -43,6 +45,7 @@ public class EventsController : ControllerBase
     // GET /events/{eventId}/dogs  и /event_dogs/{eventId}
     [HttpGet("{eventId:int}/dogs")]
     [HttpGet("/event_dogs/{eventId:int}")]
+    [AllowAnonymous]
     public IActionResult GetEventDogs(int eventId)
     {
         string sqlText = _sql.GetCommand("event_dogs");
@@ -57,6 +60,7 @@ public class EventsController : ControllerBase
     // GET /events/{eventId}/members  и /event_members/{eventId}
     [HttpGet("{eventId:int}/members")]
     [HttpGet("/event_members/{eventId:int}")]
+    [AllowAnonymous]
     public IActionResult GetEventMembers(int eventId)
     {
         string sqlText = _sql.GetCommand("event_members");
@@ -71,6 +75,7 @@ public class EventsController : ControllerBase
     // GET /events/education  и /people_events
     [HttpGet("education")]
     [HttpGet("/people_events")]
+    [AllowAnonymous]
     public IActionResult GetEducationEvents()
     {
         string sqlText = _sql.GetCommand("people_events");
@@ -80,6 +85,7 @@ public class EventsController : ControllerBase
 
     // POST /events
     [HttpPost]
+    [Authorize(Roles = "Админ")]
     public IActionResult CreateEvent([FromBody] JsonElement body)
     {
         var columns = new List<string>();
@@ -106,6 +112,7 @@ public class EventsController : ControllerBase
 
     // PUT /events/{id}
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Админ")]
     public IActionResult UpdateEvent(int id, [FromBody] JsonElement body)
     {
         var updates = new List<string>();
@@ -133,6 +140,7 @@ public class EventsController : ControllerBase
 
     // DELETE /events/{id}
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Админ")]
     public IActionResult DeleteEvent(int id)
     {
         var parameters = new Dictionary<string, object?>
