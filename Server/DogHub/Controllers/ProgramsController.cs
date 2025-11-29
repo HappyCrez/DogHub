@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Collections.Generic;
 using DogHub;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DogHub.Controllers;
 
