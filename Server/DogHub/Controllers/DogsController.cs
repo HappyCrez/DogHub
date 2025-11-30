@@ -3,6 +3,9 @@ using System.Text.Json;
 using System.Collections.Generic;
 using DogHub;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace DogHub.Controllers;
 
@@ -21,6 +24,7 @@ public class DogsController : ControllerBase
 
     // Получение списка всех собак
     [HttpGet]
+    [AllowAnonymous]
     public IActionResult GetDogs()
     {
         try
@@ -38,6 +42,7 @@ public class DogsController : ControllerBase
 
     // Получение списка чипированных собак
     [HttpGet("chiped")]
+    [AllowAnonymous]
     public IActionResult GetChipedDogs()
     {
         try
@@ -55,6 +60,7 @@ public class DogsController : ControllerBase
 
     // Создание новой собаки
     [HttpPost]
+    [Authorize(Roles = "Админ")]
     public IActionResult CreateDog([FromBody] JsonElement body)
     {
         try
@@ -90,36 +96,124 @@ public class DogsController : ControllerBase
         }
     }
 
-    // Обновление данных собаки
+    // Обновление собаки
+    //
+    // Админ:
+    //   - может редактировать любые поля кроме id
+    // Пользователь/Тренер:
+    //   - могут редактировать ТОЛЬКО свои собаки (по member_id)
+    //   - и только поля photo, bio, tags
     [HttpPut("{id:int}")]
+    [Authorize]
     public IActionResult UpdateDog(int id, [FromBody] JsonElement body)
     {
         try
         {
-            // Формирование списка обновляемых колонок
+            var isAdmin = User.IsInRole("Админ");
+
+            // Если не админ — проверяем, что собака принадлежит текущему пользователю
+            if (!isAdmin)
+            {
+                var currentUserIdStr =
+                    User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ??
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrWhiteSpace(currentUserIdStr) ||
+                    !int.TryParse(currentUserIdStr, out var currentUserId))
+                {
+                    // что-то не так с токеном
+                    return Forbid();
+                }
+
+                // узнаём владельца собаки
+                var ownerSql = "SELECT member_id FROM dog WHERE id = @id;";
+                var ownerParams = new Dictionary<string, object?> { ["id"] = id };
+                var ownerJson = _db.ExecuteSQL(ownerSql, ownerParams);
+
+                if (string.IsNullOrWhiteSpace(ownerJson))
+                {
+                    return NotFound(new { error = "Собака не найдена" });
+                }
+
+                using var ownerDoc = JsonDocument.Parse(ownerJson);
+                var root = ownerDoc.RootElement;
+
+                if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() == 0)
+                {
+                    return NotFound(new { error = "Собака не найдена" });
+                }
+
+                var ownerElement = root[0];
+
+                if (!ownerElement.TryGetProperty("member_id", out var memberIdProp) ||
+                    memberIdProp.ValueKind != JsonValueKind.Number ||
+                    !memberIdProp.TryGetInt32(out var ownerId))
+                {
+                    return StatusCode(500, new { error = "Не удалось определить владельца собаки" });
+                }
+
+                if (ownerId != currentUserId)
+                {
+                    // Пользователь/тренер пытается трогать чужую собаку
+                    return Forbid();
+                }
+            }
+
             var updates = new List<string>();
             var parameters = new Dictionary<string, object?>();
 
-            foreach (var prop in body.EnumerateObject())
+            if (isAdmin)
             {
-                if (prop.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
-                    continue;
+                // Админ может менять любые поля (кроме id, чтобы не ломать PK)
+                foreach (var prop in body.EnumerateObject())
+                {
+                    var column = prop.Name;
 
-                var column = prop.Name;
-                updates.Add($"{column} = @{column}");
-                parameters[column] = ConvertJsonValue(prop.Value);
+                    if (string.Equals(column, "id", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    updates.Add($"{column} = @{column}");
+                    parameters[column] = ConvertJsonValue(prop.Value);
+                }
+
+                if (updates.Count == 0)
+                {
+                    return BadRequest(new { error = "Нет полей для обновления" });
+                }
+            }
+            else
+            {
+                // Пользователь/Тренер — только photo, bio, tags
+                var allowedColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "photo",
+                    "bio",
+                    "tags"
+                };
+
+                foreach (var prop in body.EnumerateObject())
+                {
+                    var column = prop.Name;
+
+                    if (!allowedColumns.Contains(column))
+                        continue;
+
+                    updates.Add($"{column} = @{column}");
+                    parameters[column] = ConvertJsonValue(prop.Value);
+                }
+
+                if (updates.Count == 0)
+                {
+                    return BadRequest(new
+                    {
+                        error = "Нет допустимых полей для обновления. Можно менять только photo, bio и tags."
+                    });
+                }
             }
 
-            if (updates.Count == 0)
-                return BadRequest("Нет полей для обновления");
-
-            // Добавление id для WHERE
             parameters["id"] = id;
-
-            // Формирование SQL-запроса
             var sql = $"UPDATE dog SET {string.Join(", ", updates)} WHERE id = @id;";
 
-            // Выполнение запроса
             var json = _db.ExecuteSQL(sql, parameters);
             return Content(json, "application/json");
         }
@@ -132,6 +226,7 @@ public class DogsController : ControllerBase
 
     // Удаление собаки
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Админ")]
     public IActionResult DeleteDog(int id)
     {
         try

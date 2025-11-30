@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:5000";
+export const API_BASE_URL = "http://localhost:5000";
 
 async function getJson<T>(path: string): Promise<T> {
     const res = await fetch(`${API_BASE_URL}${path}`, {

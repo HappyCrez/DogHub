@@ -1,4 +1,8 @@
+using System;
+using System.Text;
 using DogHub;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 public class Program
 {
@@ -22,8 +26,10 @@ public class Program
         }
 
         // Регистрация зависимостей
+        builder.Services.AddSingleton(AppConfig.Instance());
         builder.Services.AddSingleton(db);
         builder.Services.AddSingleton(SQLCommandManager.Instance);
+        builder.Services.AddSingleton<TokenService>();
 
         // Подключение контроллеров
         builder.Services.AddControllers();
@@ -35,10 +41,38 @@ public class Program
                  .AllowAnyHeader()
                  .AllowAnyMethod()));
 
+        // Настройка JWT-аутентификации
+        var key = Encoding.UTF8.GetBytes(AppConfig.Instance().JwtSecret);
+
+        builder.Services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = AppConfig.Instance().JwtIssuer,
+
+                    ValidateAudience = true,
+                    ValidAudience = AppConfig.Instance().JwtAudience,
+
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromMinutes(1) // небольшой допуск по времени
+                };
+            });
+
+        builder.Services.AddAuthorization();
+
         // Создание и настройка приложения
         var app = builder.Build();
 
         app.UseCors();
+        app.UseAuthentication();
+        app.UseAuthorization();
+
         app.MapControllers();
 
         app.Run();

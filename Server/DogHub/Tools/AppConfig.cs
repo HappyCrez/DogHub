@@ -35,6 +35,17 @@ public class AppConfig
     public readonly string MailFilePath;
     public readonly string MailTimeout;
 
+    // Параметры JWT
+    private readonly string jwtIssuer;
+    private readonly string jwtAudience;
+    private readonly string jwtSecret;
+    private readonly int accessTokenLifetimeMinutes;
+
+    public string JwtIssuer => jwtIssuer;
+    public string JwtAudience => jwtAudience;
+    public string JwtSecret => jwtSecret;
+    public TimeSpan AccessTokenLifetime => TimeSpan.FromMinutes(accessTokenLifetimeMinutes);
+
     /// <summary>
     /// Читает поле в файле конфигурации, если поле не найдено выбрасывает исключение
     /// </summary>
@@ -50,20 +61,30 @@ public class AppConfig
         var envPath = FindEnvPath();
         Env.Load(envPath);
 
-        this.LogLevel = (LogLevels)int.Parse(GetValueFromEnv("LOG_LEVEL"));
+        LogLevel = (LogLevels)int.Parse(GetValueFromEnv("LOG_LEVEL"));
 
-        this.DbHost = GetValueFromEnv("DB_HOST");
-        this.DbPort = GetValueFromEnv("DB_PORT");
-        this.DbUser = GetValueFromEnv("DB_USER");
-        this.DbName = GetValueFromEnv("DB_NAME");
-        this.DbPassword = GetValueFromEnv("DB_PASSWORD");
+        DbHost = GetValueFromEnv("DB_HOST");
+        DbPort = GetValueFromEnv("DB_PORT");
+        DbUser = GetValueFromEnv("DB_USER");
+        DbName = GetValueFromEnv("DB_NAME");
+        DbPassword = GetValueFromEnv("DB_PASSWORD");
 
         // Если MailService отключён, остальные параметры заполняются "NONE"
-        this.MailService = GetValueFromEnv("MAIL_SERVICE") == "ON";
-        this.MailHost = this.MailService ? GetValueFromEnv("MAIL_HOST") : "NONE";
-        this.MailTimeout = this.MailService ? GetValueFromEnv("MAIL_TIMEOUT") : "NONE";
-        this.MailFilePath = this.MailService ? GetValueFromEnv("MAIL_FILEPATH") : "NONE";
-        this.MailPassword = this.MailService ? GetValueFromEnv("MAIL_PASSWORD") : "NONE";
+        MailService = GetValueFromEnv("MAIL_SERVICE") == "ON";
+        MailHost = this.MailService ? GetValueFromEnv("MAIL_HOST") : "NONE";
+        MailTimeout = this.MailService ? GetValueFromEnv("MAIL_TIMEOUT") : "NONE";
+        MailFilePath = this.MailService ? GetValueFromEnv("MAIL_FILEPATH") : "NONE";
+        MailPassword = this.MailService ? GetValueFromEnv("MAIL_PASSWORD") : "NONE";
+
+        // JWT
+        jwtIssuer = GetValueFromEnv("JWT_ISSUER") ?? "DogHubApi";
+        jwtAudience = GetValueFromEnv("JWT_AUDIENCE") ?? "DogHubClient";
+        jwtSecret = GetValueFromEnv("JWT_SECRET")
+            ?? throw new InvalidOperationException("JWT_SECRET is not set");
+        accessTokenLifetimeMinutes = int.TryParse(
+            GetValueFromEnv("ACCESS_TOKEN_LIFETIME_MINUTES"),
+            out var minutes)
+            ? minutes : 30;
     }
 
     /// <summary>

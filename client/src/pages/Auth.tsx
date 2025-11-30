@@ -1,9 +1,57 @@
 import { useState } from "react";
 import type { FormEvent, ChangeEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { API_BASE_URL } from "../api/client";
+import { useAuth, type AuthUser } from "../auth/AuthContext";
 
 type Mode = "login" | "register";
+
+interface LoginSuccessResponse {
+    accessToken: string;
+    accessTokenExpiresAt: string;
+    user: AuthUser;
+}
+
+interface RegisterSuccessResponse {
+    user: AuthUser;
+}
+
+async function hashPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        },
+        body: JSON.stringify(body),
+    });
+
+    let data: any = null;
+    try {
+        data = await res.json();
+    } catch {
+        // если сервер вернул не-JSON, оставим data = null
+    }
+
+    if (!res.ok) {
+        const message =
+            data && typeof data.error === "string"
+                ? data.error
+                : "Ошибка при обращении к серверу авторизации";
+        throw new Error(message);
+    }
+
+    return data as T;
+}
 
 const CITY_OPTIONS = [
     "Москва",
@@ -42,6 +90,8 @@ const CITY_OPTIONS = [
     "Рязань",
     "Балашиха",
     "Пенза",
+    "Романово",
+    "Троицкое",
 ];
 
 // базовый класс для всех текстовых инпутов с микро-анимациями
@@ -92,6 +142,9 @@ export default function Auth() {
     const [passwordConfirmValue, setPasswordConfirmValue] = useState("");
     const [showPasswordHint, setShowPasswordHint] = useState(false); // подсказка по паролю
 
+    const { login } = useAuth();
+    const navigate = useNavigate();
+
     const passwordRules = getPasswordRules(passwordValue);
     const isPasswordStrong =
         passwordRules.length &&
@@ -110,7 +163,7 @@ export default function Auth() {
             ? "Войти"
             : "Зарегистрироваться";
 
-    function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    async function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setMessage(null);
 
@@ -131,21 +184,80 @@ export default function Auth() {
 
         setLoading(true);
 
-        const formData = new FormData(e.currentTarget);
-        const payload = Object.fromEntries(formData.entries());
+        const form = e.currentTarget;
+        const formData = new FormData(form);
 
-        // На будущее: сюда добавятся реальные запросы к серверу авторизации.
-        console.log("Форма авторизации/регистрации (заглушка):", {
-            mode,
-            payload,
-        });
+        try {
+            const email = String(formData.get("email") ?? "").trim().toLowerCase();
+            const rawPassword = passwordValue;
 
-        setTimeout(() => {
-            setLoading(false);
+            // 1) клиентский хэш пароля
+            const passwordHash = await hashPassword(rawPassword);
+
+            if (mode === "register") {
+                // ====== РЕГИСТРАЦИЯ ======
+                const fullName = String(formData.get("fullName") ?? "").trim();
+                const phoneRaw = (formData.get("phone") as string | null) ?? "";
+                const phone = phoneRaw.trim() || null;
+                const city = cityInput.trim() || null;
+
+                const payload = {
+                    fullName,
+                    email,
+                    phone,
+                    city,
+                    passwordHash,
+                };
+
+                const data = await postJson<RegisterSuccessResponse>(
+                    "/auth/register",
+                    payload
+                );
+
+                console.log("Успешная регистрация, user:", data.user);
+
+                setMessage(
+                    "Регистрация прошла успешно. Теперь вы можете войти, используя свой email и пароль."
+                );
+
+                // Переключаемся в режим логина, чистим пароли
+                setMode("login");
+                setPasswordValue("");
+                setPasswordConfirmValue("");
+            } else {
+                // ====== ЛОГИН ======
+                const payload = {
+                    email,
+                    passwordHash,
+                };
+
+                const data = await postJson<LoginSuccessResponse>(
+                    "/auth/login",
+                    payload
+                );
+
+                console.log("Успешный вход, ответ:", data);
+
+                // Сохраняем пользователя и токен через контекст
+                login({
+                    user: data.user,
+                    token: data.accessToken,
+                    expiresAt: data.accessTokenExpiresAt,
+                });
+
+                // Перенаправляем в личный кабинет
+                navigate("/account");
+            }
+        } catch (err) {
+            console.error(err);
             setMessage(
-                "Сервер авторизации ещё не реализован. Сейчас это демонстрационный макет формы."
+                err instanceof Error
+                    ? err.message
+                    : "Не удалось связаться с сервером. Попробуйте позже."
             );
-        }, 500);
+        } finally {
+            setLoading(false);
+        }
     }
 
     function handleCityChange(e: ChangeEvent<HTMLInputElement>) {
@@ -412,6 +524,7 @@ export default function Auth() {
                                             ? " border-red-400 focus:border-red-500 focus:ring-red-500"
                                             : "")
                                     }
+                                    value={passwordValue}
                                     onChange={(e) => setPasswordValue(e.target.value)}
                                     onFocus={() => setShowPasswordHint(true)}
                                     onBlur={() => setShowPasswordHint(false)}
@@ -433,10 +546,22 @@ export default function Auth() {
                                             Пароль должен содержать:
                                         </p>
                                         <ul className="space-y-1">
-                                            <PasswordRuleItem ok={passwordRules.length} text="не менее 8 символов" />
-                                            <PasswordRuleItem ok={passwordRules.lower} text="строчные латинские буквы (a–z)" />
-                                            <PasswordRuleItem ok={passwordRules.upper} text="прописные латинские буквы (A–Z)" />
-                                            <PasswordRuleItem ok={passwordRules.digit} text="цифры (0–9)" />
+                                            <PasswordRuleItem
+                                                ok={passwordRules.length}
+                                                text="не менее 8 символов"
+                                            />
+                                            <PasswordRuleItem
+                                                ok={passwordRules.lower}
+                                                text="строчные латинские буквы (a–z)"
+                                            />
+                                            <PasswordRuleItem
+                                                ok={passwordRules.upper}
+                                                text="прописные латинские буквы (A–Z)"
+                                            />
+                                            <PasswordRuleItem
+                                                ok={passwordRules.digit}
+                                                text="цифры (0–9)"
+                                            />
                                         </ul>
                                     </motion.div>
                                 )}
@@ -462,6 +587,7 @@ export default function Auth() {
                                                 ? " border-red-400 focus:border-red-500 focus:ring-red-500"
                                                 : "")
                                         }
+                                        value={passwordConfirmValue}
                                         onChange={(e) =>
                                             setPasswordConfirmValue(e.target.value)
                                         }
@@ -541,12 +667,6 @@ export default function Auth() {
                                     .
                                 </p>
                             )}
-
-                            <p className="text-[11px] leading-snug text-gray-400">
-                                Когда бэкенд будет готов, здесь появятся реальные запросы к API
-                                (login/register), сохранение токена и перенаправление в личный
-                                кабинет.
-                            </p>
                         </form>
                     </div>
                 </div>
