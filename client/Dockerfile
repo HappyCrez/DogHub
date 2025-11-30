@@ -6,7 +6,7 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
-RUN npm run build
+RUN npm run build   # Vite билдит в /app/dist
 
 # --- runtime + nginx ---
 FROM nginx:alpine
@@ -18,6 +18,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # статика фронта
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+# сертификаты
+COPY certs /etc/nginx/certs
+
+EXPOSE 443
 
 CMD ["nginx", "-g", "daemon off;"]

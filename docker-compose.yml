@@ -7,13 +7,15 @@ services:
       dockerfile: Dockerfile
     container_name: doghub-api
     restart: always
-    # здесь лежит .env и все Assets
     volumes:
       - ./Assets:/app/Assets:ro
-    ports:
-      - "6000:8080"   # API снаружи на 5000, внутри на 8080
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
+    networks:
+      - backend
+    # можно оставить или убрать внешний порт, как тебе нужно:
+    # ports:
+    #   - "6000:8080"
 
   client:
     build:
@@ -24,4 +26,9 @@ services:
     depends_on:
       - api
     ports:
-      - "80:80"       # сайт доступен на 80-м порту сервера
+      - "443:443"      # HTTPS снаружи -> HTTPS внутри контейнера
+    networks:
+      - backend
+
+networks:
+  backend:
