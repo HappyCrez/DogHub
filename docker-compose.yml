@@ -11,7 +11,7 @@ services:
     volumes:
       - ./Assets:/app/Assets:ro
     ports:
-      - "5000:8080"   # API снаружи на 5000, внутри на 8080
+      - "6000:8080"   # API снаружи на 5000, внутри на 8080
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
 
