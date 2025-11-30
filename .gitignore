@@ -1,6 +1,9 @@
+.Trash-1000
 obj/
 bin/
 TestResults/
 *.env
+certs
 exec.sh
 exec.ps1
+certificate.key

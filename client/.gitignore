@@ -41,3 +41,4 @@ Thumbs.db
 .netlify/
 
 package-lock.json
+certificate.key
