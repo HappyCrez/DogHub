@@ -37,7 +37,7 @@ export default function Footer() {
                         <ul className="mt-2 space-y-1 text-sm">
                             <li>
                                 📧{" "}
-                                <a href="mailto:doghub@mail.ru">
+                                <a href="mailto:doghub@gmail.com">
                                     doghub@mail.ru
                                 </a>
                             </li>
@@ -50,7 +50,7 @@ export default function Footer() {
                             <li className="pt-1">
                                 <div className="flex items-center gap-3">
                                     <a
-                                        href="https://t.me/doghub"
+                                        href="https://t.me/LexCivis"
                                         className="inline-flex items-center gap-1 hover:opacity-80"
                                         aria-label="Telegram"
                                         target="_blank"
@@ -60,7 +60,7 @@ export default function Footer() {
                                         <span>Telegram</span>
                                     </a>
                                     <a
-                                        href="https://vk.com/doghub"
+                                        href="https://vk.com/sh1chi"
                                         className="inline-flex items-center gap-1 hover:opacity-80"
                                         aria-label="VK"
                                         target="_blank"
@@ -70,7 +70,7 @@ export default function Footer() {
                                         <span>VK</span>
                                     </a>
                                     <a
-                                        href="https://www.instagram.com/doghub"
+                                        href="https://www.instagram.com/tychaaa_"
                                         className="inline-flex items-center gap-1 hover:opacity-80"
                                         aria-label="Instagram"
                                         target="_blank"
