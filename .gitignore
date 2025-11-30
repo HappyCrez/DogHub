@@ -4,3 +4,4 @@ TestResults/
 *.env
 exec.sh
 exec.ps1
+certificate.key
