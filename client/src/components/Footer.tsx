@@ -38,7 +38,7 @@ export default function Footer() {
                             <li>
                                 📧{" "}
                                 <a href="mailto:doghub@gmail.com">
-                                    doghub@mail.ru
+                                    doghub@gmail.com
                                 </a>
                             </li>
                             <li>
