@@ -21,7 +21,8 @@ const navItems: NavItem[] = [
 
 export default function Navbar() {
     const { isAuthenticated, user, logout } = useAuth();
-    const [menuOpen, setMenuOpen] = useState(false);
+    const [profileMenuOpen, setProfileMenuOpen] = useState(false); // дропдаун профиля на десктопе
+    const [mobileOpen, setMobileOpen] = useState(false); // мобильное меню
 
     const { displayName, initials, avatarUrl } = useMemo(() => {
         if (!user) {
@@ -65,23 +66,33 @@ export default function Navbar() {
     }, [user]);
 
     const handleLogout = () => {
-        setMenuOpen(false);
+        setProfileMenuOpen(false);
+        setMobileOpen(false);
         logout();
-        // Остаёмся на текущей странице, как ты и хотел
+        // остаёмся на текущей странице
+    };
+
+    const handleNavClick = () => {
+        // закрываем все меню при переходе по ссылке
+        setMobileOpen(false);
+        setProfileMenuOpen(false);
     };
 
     return (
-        <header className="sticky top-0 z-50 border-b border-black/5 bg-white/70 backdrop-blur">
-            <div className="mx-auto flex max-w-5xl items-center justify-between p-4">
+        <header className="sticky top-0 z-50 border-b border-black/5 bg-white/80 backdrop-blur">
+            {/* Верхняя полоса */}
+            <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
                 <Link
                     to="/"
                     aria-label="На главную"
                     className="rounded-lg px-1 text-xl font-extrabold tracking-tight hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                    onClick={handleNavClick}
                 >
                     🐾 DogHub
                 </Link>
 
-                <div className="flex items-center gap-32">
+                {/* ПК-версия: навигация + профиль */}
+                <div className="hidden items-center gap-6 md:flex">
                     <nav className="flex gap-1" aria-label="Основная навигация">
                         {navItems.map((item) => (
                             <NavLink
@@ -91,6 +102,7 @@ export default function Navbar() {
                                 className={({ isActive }) =>
                                     [base, isActive ? active : idle].join(" ")
                                 }
+                                onClick={handleNavClick}
                             >
                                 {item.label}
                             </NavLink>
@@ -109,6 +121,7 @@ export default function Navbar() {
                                         : "border-black/10 text-gray-800 hover:bg-black hover:text-white",
                                 ].join(" ")
                             }
+                            onClick={handleNavClick}
                         >
                             Войти
                         </NavLink>
@@ -116,7 +129,7 @@ export default function Navbar() {
                         <div className="relative">
                             <button
                                 type="button"
-                                onClick={() => setMenuOpen((open) => !open)}
+                                onClick={() => setProfileMenuOpen((open) => !open)}
                                 className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-sm shadow-sm hover:bg-gray-50"
                             >
                                 <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gray-900 text-xs font-semibold text-white">
@@ -135,12 +148,12 @@ export default function Navbar() {
                                 </span>
                             </button>
 
-                            {menuOpen && (
+                            {profileMenuOpen && (
                                 <div className="absolute right-0 mt-2 w-44 rounded-2xl border border-gray-200 bg-white py-1 text-sm shadow-lg">
                                     <Link
                                         to="/account"
                                         className="block px-3 py-2 text-left text-gray-800 hover:bg-gray-100"
-                                        onClick={() => setMenuOpen(false)}
+                                        onClick={handleNavClick}
                                     >
                                         Личный кабинет
                                     </Link>
@@ -156,7 +169,115 @@ export default function Navbar() {
                         </div>
                     )}
                 </div>
+
+                {/* Мобильная версия: кнопка-бургер */}
+                <button
+                    type="button"
+                    className="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black md:hidden"
+                    aria-label="Открыть меню"
+                    aria-expanded={mobileOpen}
+                    onClick={() => setMobileOpen((open) => !open)}
+                >
+                    {/* Иконка: три полоски / крестик */}
+                    <span className="sr-only">Меню</span>
+                    <div className="flex h-4 w-4 flex-col justify-between">
+                        <span
+                            className={`block h-[2px] rounded-full bg-gray-900 transition-transform ${
+                                mobileOpen ? "translate-y-[6px] rotate-45" : ""
+                            }`}
+                        />
+                        <span
+                            className={`block h-[2px] rounded-full bg-gray-900 transition-opacity ${
+                                mobileOpen ? "opacity-0" : "opacity-100"
+                            }`}
+                        />
+                        <span
+                            className={`block h-[2px] rounded-full bg-gray-900 transition-transform ${
+                                mobileOpen ? "-translate-y-[6px] -rotate-45" : ""
+                            }`}
+                        />
+                    </div>
+                </button>
             </div>
+
+            {/* Мобильная выпадающая панель */}
+            {mobileOpen && (
+                <div className="border-t border-black/5 bg-white/95 backdrop-blur md:hidden">
+                    <div className="mx-auto max-w-5xl px-4 py-3 space-y-3">
+                        <nav className="flex flex-col gap-1" aria-label="Основная навигация">
+                            {navItems.map((item) => (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    end={item.to === "/"}
+                                    className={({ isActive }) =>
+                                        [
+                                            "rounded-xl px-3 py-2 text-sm font-medium",
+                                            isActive
+                                                ? "bg-black text-white"
+                                                : "text-gray-800 hover:bg-gray-100",
+                                        ].join(" ")
+                                    }
+                                    onClick={handleNavClick}
+                                >
+                                    {item.label}
+                                </NavLink>
+                            ))}
+                        </nav>
+
+                        <div className="border-t border-gray-100 pt-3">
+                            {!isAuthenticated ? (
+                                <NavLink
+                                    to="/auth"
+                                    className="inline-flex w-full items-center justify-center rounded-xl border border-black/10 px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-black hover:text-white"
+                                    onClick={handleNavClick}
+                                >
+                                    Войти
+                                </NavLink>
+                            ) : (
+                                <div className="flex flex-col gap-2 text-sm">
+                                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                                        <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gray-900 text-xs font-semibold text-white">
+                                            {avatarUrl ? (
+                                                <img
+                                                    src={avatarUrl}
+                                                    alt={displayName}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <span>{initials}</span>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-semibold text-gray-900">
+                                                {displayName}
+                                            </span>
+                                            <span className="text-[11px] text-gray-500">
+                                                Участник DogHub
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <Link
+                                        to="/account"
+                                        className="rounded-xl bg-black px-3 py-2 text-center text-sm font-semibold text-white hover:bg-black/90"
+                                        onClick={handleNavClick}
+                                    >
+                                        Личный кабинет
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        className="rounded-xl px-3 py-2 text-center text-sm font-semibold text-red-600 hover:bg-red-50"
+                                        onClick={handleLogout}
+                                    >
+                                        Выйти
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </header>
     );
 }
