@@ -9,10 +9,10 @@ using DogHub;
 /// </summary>
 public class MailService
 {
-    private readonly bool DEBUG = true; //TODO::REMOVE
+    private bool MailDebug = true; // TODO::REMOVE
 
-    private readonly string userName;
-    private readonly string password;
+    private readonly string hostName;
+    private readonly string hostPassword;
     private readonly int port = 587;
     private readonly int timeout;
     
@@ -33,7 +33,6 @@ public class MailService
         {
             Thread.Sleep(timeout * 1000);
             string records = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand("notifications"));
-            bool isFirstSend = true; //TODO::REMOVE
             foreach (JsonElement client in JsonDocument.Parse(records).RootElement.EnumerateArray())
             {
                 string name = "Клиент";
@@ -52,16 +51,6 @@ public class MailService
                     continue;
                 }
 
-                if (DEBUG) //TODO::REMOVE
-                {
-                    Console.WriteLine($"Получатель {name}, {email}");
-                    email = userName; // При отладке отправляем все сообщения себе
-                    if (isFirstSend == false) // Если не первая отправка то продолжаем цикл -> не спамим себе в почту
-                    {
-                        continue;
-                    }
-                    isFirstSend = false;
-                }
                 //TODO::В РЕЛИЗ ДОБАВИТЬ ПАРАМЕТРЫ СУММЫ И ДАТА ПОСЛЕДНЕГО ПЛАТЕЖА ДЛЯ ЭТОГО НУЖНО ПОМЕНЯТЬ ЗАПРОС "notifications"
                 string today = DateTime.Now.ToString("dd MMMM yyyy", rus);
                 SendEmail(email, notificationSubject, TextFormatter.ModifyStr(notificationBody,[name, today]));
@@ -77,9 +66,17 @@ public class MailService
     /// <param name="body">Текст сообщения в формате html</param>
     private void SendEmail(string toEmail, string subject, string body)
     {
+        if (MailDebug) // В режиме debug все сообщения отправляются hostEmail
+        {
+            toEmail = hostName;
+        }
+        if (AppConfig.Instance().LogLevel <= AppConfig.LogLevels.DEBUG)
+        {
+            Console.WriteLine($"Отправляем сообщение {toEmail}");
+        }    
         try
         {
-            var fromAddress = new MailAddress(userName, "DogHub Company");
+            var fromAddress = new MailAddress(hostName, "DogHub Company");
             var toAddress = new MailAddress(toEmail);
             
             var smtp = new SmtpClient
@@ -89,7 +86,7 @@ public class MailService
                 EnableSsl = true,
                 DeliveryMethod = SmtpDeliveryMethod.Network,
                 UseDefaultCredentials = false,
-                Credentials = new NetworkCredential(userName, password),
+                Credentials = new NetworkCredential(hostName, hostPassword),
                 Timeout = 10000 // 10 секунд
             };
             
@@ -106,38 +103,36 @@ public class MailService
         }
         catch (SmtpException smtpEx)
         {
-            Console.WriteLine($"SMTP ошибка: {smtpEx.StatusCode} - {smtpEx.Message}");
+            if (AppConfig.Instance().LogLevel <= AppConfig.LogLevels.DEBUG)
+            {
+                Console.WriteLine($"SMTP ошибка: {smtpEx.StatusCode} - {smtpEx.Message}");
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка отправки: {ex.Message}");
+            if (AppConfig.Instance().LogLevel <= AppConfig.LogLevels.DEBUG)
+            {
+                Console.WriteLine($"Ошибка отправки: {ex.Message}");
+            }
         }
     }
 
     /// <summary>
     /// Конфигурирует почтовый сервис
     /// </summary>
-    /// <param name="configuration">
-    /// Массив конфигурации должен содержать поля в строго указанном порядке:
-    /// 1. Почтовый адрес отправителя
-    /// 2. Пароль от приложения почтового адреса (не от самой почты)
-    /// 3. Путь к файлу в котором хранится сообщение для отправки
-    /// 4. Время ожидания между чтениями базы данных
-    /// </param>
     /// <param name="database">
     /// Модель базы данных для подключение к физической БД
     /// </param>
-    public MailService(string[] configuration, DataBaseModel database)
+    public MailService(DataBaseModel database)
     {
-        userName = configuration[0];
-        password = configuration[1];
+        this.hostName = AppConfig.Instance().MailHost;
+        this.hostPassword = AppConfig.Instance().MailPassword;
+        this.timeout = int.Parse(AppConfig.Instance().MailTimeout);
 
         // Читаем формат уведомления подготовленный в файле
-        notificationBody = File.ReadAllText(configuration[2]);
+        this.notificationBody = File.ReadAllText(AppConfig.Instance().MailFilePath);
 
-        // Выставляем время ожидания между отправками
-        int.TryParse(configuration[3], out this.timeout);
-
+        // БД для исполнения запросов
         this.database = database;
 
         // Отделяем проверку состояния БД в отдельный поток

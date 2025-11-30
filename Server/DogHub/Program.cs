@@ -6,12 +6,19 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Загрузка конфигурации из файла .env
-        var appConfig = AppConfig.FromEnv();
-
         // Создание экземпляра базы данных
-        var connectionString = appConfig.BuildConnectionString();
+        var connectionString = AppConfig.Instance().BuildConnectionString();
         var db = new DataBaseModel(connectionString);
+
+        // Запуск почтового сервиса, если он активирован
+        if (AppConfig.Instance().MailService)
+        {
+            new MailService(db);
+        }
+        else if (AppConfig.Instance().LogLevel <= AppConfig.LogLevels.INFO)
+        {
+            Console.WriteLine("MailService is OFF");
+        }
 
         // Регистрация зависимостей
         builder.Services.AddSingleton(db);
@@ -26,10 +33,6 @@ public class Program
                 p.AllowAnyOrigin()
                  .AllowAnyHeader()
                  .AllowAnyMethod()));
-
-        // Запуск почтового сервиса
-        var mailConfig = appConfig.BuildMailConfiguration();
-        var mailService = new MailService(mailConfig, db);
 
         // Создание и настройка приложения
         var app = builder.Build();

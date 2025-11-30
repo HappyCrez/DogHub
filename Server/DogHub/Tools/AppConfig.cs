@@ -9,40 +9,61 @@ namespace DogHub;
 /// </summary>
 public class AppConfig
 {
+    private static AppConfig? instance = null;
+
+    public enum LogLevels
+    {
+        NOTHING = -1, // Режим "quite" без вывода
+        INFO    = 0,  // Только основная информация
+        DEBUG   = 1,  // Выводить все ошибки
+    }
+
+    // Состояние программы
+    public readonly LogLevels LogLevel;
+
     // Параметры базы данных
-    private readonly string dbHost;
-    private readonly string dbPort;
-    private readonly string dbUser;
-    private readonly string dbName;
-    private readonly string dbPassword;
+    public readonly string DbHost;
+    public readonly string DbPort;
+    public readonly string DbUser;
+    public readonly string DbName;
+    public readonly string DbPassword;
 
     // Параметры почтового сервиса
-    private readonly string mailUser;
-    private readonly string mailPassword;
-    private readonly string mailFilePath;
-    private readonly string mailTimeout;
+    public readonly bool MailService;
+    public readonly string MailHost;
+    public readonly string MailPassword;
+    public readonly string MailFilePath;
+    public readonly string MailTimeout;
 
-    private AppConfig(
-        string dbHost,
-        string dbPort,
-        string dbUser,
-        string dbName,
-        string dbPassword,
-        string mailUser,
-        string mailPassword,
-        string mailFilePath,
-        string mailTimeout)
+    /// <summary>
+    /// Читает поле в файле конфигурации, если поле не найдено выбрасывает исключение
+    /// </summary>
+    /// <param name="field">Поле для чтения из файла</param>
+    private string GetValueFromEnv(string field)
     {
-        this.dbHost = dbHost;
-        this.dbPort = dbPort;
-        this.dbUser = dbUser;
-        this.dbName = dbName;
-        this.dbPassword = dbPassword;
+        return Environment.GetEnvironmentVariable(field)
+            ?? throw new InvalidOperationException($".env hasn't field {field}");
+    }
 
-        this.mailUser = mailUser;
-        this.mailPassword = mailPassword;
-        this.mailFilePath = mailFilePath;
-        this.mailTimeout = mailTimeout;
+    private AppConfig()
+    {
+        var envPath = FindEnvPath();
+        Env.Load(envPath);
+
+        this.LogLevel = (LogLevels)int.Parse(GetValueFromEnv("LOG_LEVEL"));
+
+        this.DbHost = GetValueFromEnv("DB_HOST");
+        this.DbPort = GetValueFromEnv("DB_PORT");
+        this.DbUser = GetValueFromEnv("DB_USER");
+        this.DbName = GetValueFromEnv("DB_NAME");
+        this.DbPassword = GetValueFromEnv("DB_PASSWORD");
+
+        // Если MailService отключён, остальные параметры заполняются "NONE"
+        this.MailService = GetValueFromEnv("MAIL_SERVICE") == "ON";
+        this.MailHost = this.MailService ? GetValueFromEnv("MAIL_HOST") : "NONE";
+        this.MailTimeout = this.MailService ? GetValueFromEnv("MAIL_TIMEOUT") : "NONE";
+        this.MailFilePath = this.MailService ? GetValueFromEnv("MAIL_FILEPATH") : "NONE";
+        this.MailPassword = this.MailService ? GetValueFromEnv("MAIL_PASSWORD") : "NONE";
     }
 
     /// <summary>
@@ -73,64 +94,26 @@ public class AppConfig
     }
 
     /// <summary>
-    /// Загружает переменные среды из файла .env и создаёт объект конфигурации
-    /// </summary>
-    public static AppConfig FromEnv()
-    {
-        var envPath = FindEnvPath();
-        Env.Load(envPath);
-
-        // Чтение параметров базы данных
-        string dbHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-        string dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
-        string dbUser = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
-        string dbName = Environment.GetEnvironmentVariable("DB_NAME") ?? "doghub_db";
-        string dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD")
-            ?? throw new InvalidOperationException("DB_PASSWORD is not set");
-
-        // Чтение параметров почтового сервиса
-        string mailUser = Environment.GetEnvironmentVariable("MAIL_USER")
-            ?? throw new InvalidOperationException("MAIL_USER is not set");
-        string mailPassword = Environment.GetEnvironmentVariable("MAIL_PASSWORD")
-            ?? throw new InvalidOperationException("MAIL_PASSWORD is not set");
-
-        // Чтение пути к HTML-шаблону письма
-        string mailFilePathRaw = Environment.GetEnvironmentVariable("MAIL_FILE_PATH")
-            ?? "MailNotification.html";
-
-        // Чтение таймаута
-        string mailTimeout = Environment.GetEnvironmentVariable("MAIL_TIMEOUT") ?? "300";
-
-        // Директория, из которой загружен файл .env
-        var envDir = Path.GetDirectoryName(envPath)
-                     ?? throw new InvalidOperationException("Не удалось определить директорию .env");
-
-        // Формирование абсолютного пути
-        string mailFilePath = Path.IsPathRooted(mailFilePathRaw)
-            ? mailFilePathRaw
-            : Path.GetFullPath(Path.Combine(envDir, mailFilePathRaw));
-
-        return new AppConfig(
-            dbHost, dbPort, dbUser, dbName, dbPassword,
-            mailUser, mailPassword, mailFilePath, mailTimeout);
-    }
-
-    /// <summary>
     /// Формирует строку подключения к PostgreSQL
     /// </summary>
     public string BuildConnectionString()
     {
         return
-            $"Host={dbHost};Port={dbPort};" +
-            $"Username={dbUser};Password={dbPassword};" +
-            $"Database={dbName}";
+            $"Host={DbHost};Port={DbPort};" +
+            $"Username={DbUser};Password={DbPassword};" +
+            $"Database={DbName}";
     }
 
     /// <summary>
-    /// Формирует конфигурацию для почтового сервиса
+    /// Создает объект AppConfig или возвращает созданный ранее
     /// </summary>
-    public string[] BuildMailConfiguration()
+    /// <returns>Ссылка на объект AppConfig</returns>
+    public static AppConfig Instance()
     {
-        return new[] { mailUser, mailPassword, mailFilePath, mailTimeout };
+        if (instance == null)
+        {
+            instance = new AppConfig();
+        }
+        return instance;
     }
 }
