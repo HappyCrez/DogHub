@@ -10,15 +10,23 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Загрузка конфигурации из файла .env
-        var appConfig = AppConfig.FromEnv();
-
         // Создание экземпляра базы данных
-        var connectionString = appConfig.BuildConnectionString();
+        var connectionString = AppConfig.Instance().BuildConnectionString();
         var db = new DataBaseModel(connectionString);
 
+        // Запуск почтового сервиса, если он активирован
+        MailService? mailService = null;
+        if (AppConfig.Instance().MailService)
+        {
+            mailService = new MailService(db);
+        }
+        else if (AppConfig.Instance().LogLevel <= AppConfig.LogLevels.INFO)
+        {
+            Console.WriteLine("MailService is OFF");
+        }
+
         // Регистрация зависимостей
-        builder.Services.AddSingleton(appConfig);
+        builder.Services.AddSingleton(AppConfig.Instance());
         builder.Services.AddSingleton(db);
         builder.Services.AddSingleton(SQLCommandManager.Instance);
         builder.Services.AddSingleton<TokenService>();
@@ -34,7 +42,7 @@ public class Program
                  .AllowAnyMethod()));
 
         // Настройка JWT-аутентификации
-        var key = Encoding.UTF8.GetBytes(appConfig.JwtSecret);
+        var key = Encoding.UTF8.GetBytes(AppConfig.Instance().JwtSecret);
 
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -43,10 +51,10 @@ public class Program
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = appConfig.JwtIssuer,
+                    ValidIssuer = AppConfig.Instance().JwtIssuer,
 
                     ValidateAudience = true,
-                    ValidAudience = appConfig.JwtAudience,
+                    ValidAudience = AppConfig.Instance().JwtAudience,
 
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(key),
@@ -58,10 +66,6 @@ public class Program
 
         builder.Services.AddAuthorization();
 
-        // Запуск почтового сервиса
-        var mailConfig = appConfig.BuildMailConfiguration();
-        var mailService = new MailService(mailConfig, db);
-
         // Создание и настройка приложения
         var app = builder.Build();
 
@@ -72,5 +76,11 @@ public class Program
         app.MapControllers();
 
         app.Run();
+
+        // После заквершения app, завершаем работу MailService
+        if (mailService != null)
+        {
+            mailService.MailServiceStop();
+        }
     }
 }

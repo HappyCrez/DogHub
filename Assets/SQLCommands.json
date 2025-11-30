@@ -29,6 +29,9 @@
   "event_members": 
   "SELECT DISTINCT m.id AS member_id, m.full_name, m.phone, m.email, m.city, m.avatar_url, m.bio, m.join_date, m.membership_end_date, m.role FROM event_registration er JOIN member m ON er.member_id = m.id WHERE er.event_id = @event_id;",
   
+  "notifications":
+  "SELECT * from member WHERE id=1;",
+  
   "get_member_by_email":
   "SELECT m.id AS member_id, m.full_name, m.phone, m.email, m.city, m.avatar_url, m.bio AS owner_bio, m.join_date, m.membership_end_date, m.role, m.password_hash AS password_hash FROM member m WHERE m.email = @email;",
 
