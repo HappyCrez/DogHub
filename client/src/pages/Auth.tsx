@@ -209,6 +209,20 @@ export default function Auth() {
         setPhoneValue(formatted || "+7");
     }
 
+    function switchMode(next: Mode) {
+        if (next === mode) return;
+
+        setMode(next);
+
+        setMessage(null);
+        setPasswordValue("");
+        setPasswordConfirmValue("");
+        setPhoneValue("");
+        setCityInput("");
+        setCitySuggestions([]);
+        setShowCityDropdown(false);
+    }
+
     async function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setMessage(null);
@@ -423,7 +437,7 @@ export default function Auth() {
                                 />
                                 <button
                                     type="button"
-                                    onClick={() => setMode("login")}
+                                    onClick={() => switchMode("login")}
                                     className={`relative z-10 flex-1 rounded-xl px-3 py-2 transition-colors ${
                                         mode === "login"
                                             ? "text-gray-900"
@@ -434,7 +448,7 @@ export default function Auth() {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setMode("register")}
+                                    onClick={() => switchMode("register")}
                                     className={`relative z-10 flex-1 rounded-xl px-3 py-2 transition-colors ${
                                         mode === "register"
                                             ? "text-gray-900"
@@ -697,7 +711,7 @@ export default function Auth() {
                                     Нет аккаунта?{" "}
                                     <button
                                         type="button"
-                                        onClick={() => setMode("register")}
+                                        onClick={() => switchMode("register")}
                                         className="font-medium text-gray-800 underline-offset-2 hover:underline"
                                     >
                                         Зарегистрируйтесь
@@ -709,7 +723,7 @@ export default function Auth() {
                                     Уже есть аккаунт?{" "}
                                     <button
                                         type="button"
-                                        onClick={() => setMode("login")}
+                                        onClick={() => switchMode("login")}
                                         className="font-medium text-gray-800 underline-offset-2 hover:underline"
                                     >
                                         Войдите
