@@ -15,9 +15,11 @@ public class MailService
     private readonly string hostPassword;
     private readonly int port = 587;
     private readonly int timeout;
+    private DateTime lastNotification;
     
     private readonly string notificationSubject = "DogHub Notification";
     private string notificationBody; // Формат уведомления
+    private bool mailServiceRunning;
 
     private DataBaseModel database { get; set; }
 
@@ -29,32 +31,41 @@ public class MailService
     /// </summary>
     private void Cron()
     {
-        while (true)
+        while (mailServiceRunning)
         {
-            Thread.Sleep(timeout * 1000);
-            string records = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand("notifications"));
-            foreach (JsonElement client in JsonDocument.Parse(records).RootElement.EnumerateArray())
+            Thread.Sleep(100);
+            if ((DateTime.Now-lastNotification).TotalSeconds >= timeout)
             {
-                string name = "Клиент";
-                string email = string.Empty;
-                if (client.TryGetProperty("fullName", out JsonElement nameElement))
-                {
-                    name = nameElement.GetString() ?? "Клиент";
-                }
-                if (client.TryGetProperty("email", out JsonElement emailElement))
-                {
-                    email = emailElement.GetString() ?? string.Empty;
-                }
-                
-                if (email == string.Empty) // Если почта не указана пропускаем клиента
-                {
-                    continue;
-                }
-
-                //TODO::В РЕЛИЗ ДОБАВИТЬ ПАРАМЕТРЫ СУММЫ И ДАТА ПОСЛЕДНЕГО ПЛАТЕЖА ДЛЯ ЭТОГО НУЖНО ПОМЕНЯТЬ ЗАПРОС "notifications"
-                string today = DateTime.Now.ToString("dd MMMM yyyy", rus);
-                SendEmail(email, notificationSubject, TextFormatter.ModifyStr(notificationBody,[name, today]));
+                Notificate();
+                lastNotification = DateTime.Now;
             }
+        }
+    }
+
+    private void Notificate()
+    {
+        string records = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand("notifications"));
+        foreach (JsonElement client in JsonDocument.Parse(records).RootElement.EnumerateArray())
+        {
+            string name = "Клиент";
+            string email = string.Empty;
+            if (client.TryGetProperty("fullName", out JsonElement nameElement))
+            {
+                name = nameElement.GetString() ?? "Клиент";
+            }
+            if (client.TryGetProperty("email", out JsonElement emailElement))
+            {
+                email = emailElement.GetString() ?? string.Empty;
+            }
+            
+            if (email == string.Empty) // Если почта не указана пропускаем клиента
+            {
+                continue;
+            }
+
+            //TODO::В РЕЛИЗ ДОБАВИТЬ ПАРАМЕТРЫ СУММЫ И ДАТА ПОСЛЕДНЕГО ПЛАТЕЖА ДЛЯ ЭТОГО НУЖНО ПОМЕНЯТЬ ЗАПРОС "notifications"
+            string today = DateTime.Now.ToString("dd MMMM yyyy", rus);
+            SendEmail(email, notificationSubject, TextFormatter.ModifyStr(notificationBody,[name, today]));
         }
     }
 
@@ -118,6 +129,14 @@ public class MailService
     }
 
     /// <summary>
+    /// Останавливает работу сервиса путем смены состояния переменной
+    /// </summary>
+    public void MailServiceStop()
+    {
+        mailServiceRunning = false;
+    }
+
+    /// <summary>
     /// Конфигурирует почтовый сервис
     /// </summary>
     /// <param name="database">
@@ -136,6 +155,8 @@ public class MailService
         this.database = database;
 
         // Отделяем проверку состояния БД в отдельный поток
+        mailServiceRunning = true; // Флаг завершения работы потока
+        lastNotification = DateTime.Now;
         Thread cronThread = new Thread(Cron);
         cronThread.Start();
     }

@@ -11,9 +11,10 @@ public class Program
         var db = new DataBaseModel(connectionString);
 
         // Запуск почтового сервиса, если он активирован
+        MailService? mailService = null;
         if (AppConfig.Instance().MailService)
         {
-            new MailService(db);
+            mailService = new MailService(db);
         }
         else if (AppConfig.Instance().LogLevel <= AppConfig.LogLevels.INFO)
         {
@@ -41,5 +42,11 @@ public class Program
         app.MapControllers();
 
         app.Run();
+
+        // После заквершения app, завершаем работу MailService
+        if (mailService != null)
+        {
+            mailService.MailServiceStop();
+        }
     }
 }
