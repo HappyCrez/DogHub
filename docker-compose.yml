@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ./Server/DogHub
+      dockerfile: Dockerfile
+    container_name: doghub-api
+    restart: always
+    # здесь лежит .env и все Assets
+    volumes:
+      - ./Assets:/app/Assets:ro
+    ports:
+      - "5000:8080"   # API снаружи на 5000, внутри на 8080
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: doghub-client
+    restart: always
+    depends_on:
+      - api
+    ports:
+      - "80:80"       # сайт доступен на 80-м порту сервера
