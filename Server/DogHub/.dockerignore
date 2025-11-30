@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/.dockerignore
+**/.git/
+**/.gitignore
+**/.env
+**/node_modules/
+*.log
+Dockerfile*
+docker-compose*
