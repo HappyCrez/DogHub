@@ -40,6 +40,23 @@ public class DogsController : ControllerBase
         }
     }
 
+    // Получить отчет по id собаки
+    [HttpGet("report/{id:int}")]
+    [AllowAnonymous]
+    public IActionResult GetReportDog(int id)
+    {
+        try
+        {
+            var pdfBytes = DogReport.Instance.CreateReport(id);
+            return File(pdfBytes, "application/pdf", $"dog_report_{id}.pdf");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GetDogs] {ex}");
+            return StatusCode(500, new { error = "Ошибка при формировании отчета о собаке" });
+        }
+    }
+
     // Получение списка чипированных собак
     [HttpGet("chiped")]
     [AllowAnonymous]
