@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AboutClub from "../components/AboutClub";
 import { getUsers, getEvents, type ApiUserWithDogRow } from "../api/client";
+import MemberAvatar from "../components/MemberAvatar";
 
 /* ===== types для событий ===== */
 
@@ -154,7 +155,7 @@ export default function Home() {
     // ближайшие события (2 шт.)
     const upcomingShort = upcomingEvents.slice(0, 2);
 
-    // последние вступившие участники (3 шт.)
+    // последние вступившие участники (4 шт.)
     const recentMembers = useMemo(() => {
         return [...members]
             .filter((m) => m.joinDate)
@@ -283,16 +284,13 @@ export default function Home() {
                         <ul className="space-y-3">
                             {upcomingShort.map((ev) => (
                                 <Link key={ev.id} to={`/events/${ev.id}`} className="block">
-                                    <li
-                                        key={ev.id}
-                                        className="rounded-xl border border-gray-200 p-3"
-                                    >
+                                    <li className="rounded-xl border border-gray-200 p-3">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="text-sm font-semibold">{ev.title}</span>
                                             {ev.category && (
                                                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
-                            {ev.category}
-                          </span>
+                                                    {ev.category}
+                                                </span>
                                             )}
                                         </div>
                                         <div className="mt-1 text-sm text-gray-600">
@@ -341,14 +339,10 @@ export default function Home() {
                                 to={`/members/${m.id}`}
                                 className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2 text-left hover:bg-gray-100"
                             >
-                                <img
-                                    src={
-                                        m.avatar ??
-                                        "https://via.placeholder.com/40x40?text=🐾"
-                                    }
-                                    alt={m.fullName}
-                                    className="h-10 w-10 rounded-full object-cover"
-                                    loading="lazy"
+                                <MemberAvatar
+                                    fullName={m.fullName}
+                                    avatarUrl={m.avatar ?? null}
+                                    size="md"
                                 />
                                 <div className="min-w-0">
                                     <div className="truncate text-sm font-medium leading-none">

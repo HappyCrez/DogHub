@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { Link } from "react-router-dom";
+import MemberAvatar from "./MemberAvatar";
 
 export interface MemberDog {
     id: number;
@@ -48,14 +49,10 @@ const MemberCard: FC<MemberCardProps> = ({ member, showDogs = true }) => {
         >
             {/* шапка */}
             <div className="flex items-start gap-4">
-                <img
-                    src={
-                        avatar ??
-                        "https://via.placeholder.com/64x64?text=🐾"
-                    }
-                    alt={fullName}
-                    className="h-14 w-14 rounded-full object-cover"
-                    loading="lazy"
+                <MemberAvatar
+                    fullName={fullName}
+                    avatarUrl={avatar ?? null}
+                    size="lg"
                 />
 
                 <div className="min-w-0 flex-1">
