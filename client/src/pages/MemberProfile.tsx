@@ -3,7 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { getUsers, type ApiUserWithDogRow } from "../api/client";
 import type { MemberWithDogs } from "../components/MemberCard";
 import { formatJoined } from "../components/MemberCard";
-import  { groupUsers } from "./Members.tsx"
+import { groupUsers } from "./Members.tsx";
+import MemberAvatar from "../components/MemberAvatar";
 
 export default function MemberProfile() {
     const { id } = useParams<{ id: string }>();
@@ -106,15 +107,13 @@ export default function MemberProfile() {
 
             {/* шапка профиля */}
             <div className="flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:flex-row sm:items-start">
-                <img
-                    src={
-                        member.avatar ??
-                        "https://via.placeholder.com/96x96?text=🐾"
-                    }
-                    alt={member.fullName}
-                    className="h-20 w-20 rounded-full object-cover sm:h-24 sm:w-24"
-                    loading="lazy"
-                />
+                <div className="shrink-0">
+                    <MemberAvatar
+                        fullName={member.fullName}
+                        avatarUrl={member.avatar}
+                        size="xl"
+                    />
+                </div>
 
                 <div className="min-w-0 flex-1 space-y-2">
                     <div>
@@ -133,14 +132,14 @@ export default function MemberProfile() {
                             {member.phone && <span>📞 {member.phone}</span>}
                             {member.email && (
                                 <span>
-                  📧{" "}
+                                    📧{" "}
                                     <a
                                         href={`mailto:${member.email}`}
                                         className="underline decoration-dotted underline-offset-2 hover:no-underline"
                                     >
-                    {member.email}
-                  </a>
-                </span>
+                                        {member.email}
+                                    </a>
+                                </span>
                             )}
                         </div>
                     )}
@@ -210,8 +209,8 @@ export default function MemberProfile() {
                                                     key={t}
                                                     className="rounded-full bg-gray-100 px-2 py-[1px] text-[10px] text-gray-700"
                                                 >
-                          #{t}
-                        </span>
+                                                    #{t}
+                                                </span>
                                             ))}
                                         </div>
                                     )}
