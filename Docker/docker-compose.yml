@@ -1,0 +1,36 @@
+services:
+  api:
+    build:
+      context: ../Server/DogHub/
+      dockerfile: ../../Docker/Server/Dockerfile    # ← теперь относительно docker-compose.yml
+    container_name: doghub-api
+    restart: always
+    volumes:
+      - ../Assets:/app/Assets:ro
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"    
+    networks:
+      - backend
+
+  client:
+    build:
+      context: ../client
+      dockerfile: ../Docker/Client/Dockerfile    # ← теперь относительно docker-compose.yml
+    container_name: doghub-client
+    restart: always
+    depends_on:
+      - api
+    ports:
+      - "443:443"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+      - ./Client/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  
+    networks:
+      - backend
+
+networks:
+  backend:
