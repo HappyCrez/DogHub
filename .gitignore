@@ -3,5 +3,6 @@ obj/
 bin/
 TestResults/
 *.env
+certs
 exec.sh
 exec.ps1
