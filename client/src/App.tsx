@@ -18,6 +18,7 @@ import { AuthProvider } from "./auth/AuthContext";
 export default function App() {
     const location = useLocation();
     const reduce = useReducedMotion();
+    const initialState = reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 };
 
     return (
         <AuthProvider>
@@ -26,7 +27,7 @@ export default function App() {
                 <AnimatePresence mode="wait">
                     <motion.main
                         key={location.pathname}
-                        initial={{ opacity: 0, y: 8 }}
+                        initial={initialState}
                         animate={{
                             opacity: 1,
                             y: 0,
