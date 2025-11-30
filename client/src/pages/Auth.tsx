@@ -129,6 +129,19 @@ function PasswordRuleItem({ ok, text }: { ok: boolean; text: string }) {
     );
 }
 
+// Форматируем 10 цифр после +7 в вид +7-XXX-XXX-XX-XX
+function formatRussianPhone(restDigits: string): string {
+    const digits = restDigits.replace(/\D/g, "").slice(0, 10); // максимум 10 цифр
+    const parts: string[] = [];
+
+    if (digits.length > 0) parts.push(digits.slice(0, 3));
+    if (digits.length > 3) parts.push(digits.slice(3, 6));
+    if (digits.length > 6) parts.push(digits.slice(6, 8));
+    if (digits.length > 8) parts.push(digits.slice(8, 10));
+
+    return "+7" + (parts.length ? "-" + parts.join("-") : "");
+}
+
 export default function Auth() {
     const [mode, setMode] = useState<Mode>("login");
     const [loading, setLoading] = useState(false);
@@ -141,6 +154,8 @@ export default function Auth() {
     const [passwordValue, setPasswordValue] = useState("");
     const [passwordConfirmValue, setPasswordConfirmValue] = useState("");
     const [showPasswordHint, setShowPasswordHint] = useState(false); // подсказка по паролю
+
+    const [phoneValue, setPhoneValue] = useState(""); // форматированный телефон
 
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -162,6 +177,37 @@ export default function Auth() {
         : mode === "login"
             ? "Войти"
             : "Зарегистрироваться";
+
+    // === Телефон: маска +7-XXX-XXX-XX-XX ===
+
+    function handlePhoneFocus() {
+        // при фокусе, если ничего нет — подставляем "+7"
+        if (!phoneValue) {
+            setPhoneValue("+7");
+        }
+    }
+
+    function handlePhoneBlur() {
+        // если пользователь так и не ввёл цифры, очищаем поле
+        if (phoneValue === "+7") {
+            setPhoneValue("");
+        }
+    }
+
+    function handlePhoneChange(e: ChangeEvent<HTMLInputElement>) {
+        const value = e.target.value;
+
+        // Все цифры из ввода
+        let digits = value.replace(/\D/g, "");
+
+        // первая "7" — это код страны, остальные — тело номера
+        if (digits.startsWith("7")) {
+            digits = digits.slice(1);
+        }
+
+        const formatted = formatRussianPhone(digits);
+        setPhoneValue(formatted || "+7");
+    }
 
     async function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -197,8 +243,9 @@ export default function Auth() {
             if (mode === "register") {
                 // ====== РЕГИСТРАЦИЯ ======
                 const fullName = String(formData.get("fullName") ?? "").trim();
-                const phoneRaw = (formData.get("phone") as string | null) ?? "";
-                const phone = phoneRaw.trim() || null;
+                // телефон берём из нашего состояния (маска)
+                const phone =
+                    phoneValue && phoneValue !== "+7" ? phoneValue.trim() : null;
                 const city = cityInput.trim() || null;
 
                 const payload = {
@@ -220,10 +267,11 @@ export default function Auth() {
                     "Регистрация прошла успешно. Теперь вы можете войти, используя свой email и пароль."
                 );
 
-                // Переключаемся в режим логина, чистим пароли
+                // Переключаемся в режим логина, чистим пароли и телефон
                 setMode("login");
                 setPasswordValue("");
                 setPasswordConfirmValue("");
+                setPhoneValue("");
             } else {
                 // ====== ЛОГИН ======
                 const payload = {
@@ -362,9 +410,6 @@ export default function Auth() {
                                     {mode === "login" ? "Вход в аккаунт" : "Регистрация"}
                                 </h2>
                             </div>
-                            <span className="hidden rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white md:inline">
-                                beta-версия
-                            </span>
                         </div>
 
                         {/* Переключатель Вход / Регистрация с анимацией */}
@@ -453,8 +498,13 @@ export default function Auth() {
                                         name="phone"
                                         type="tel"
                                         autoComplete="tel"
+                                        inputMode="tel"
                                         className={inputBaseClass}
-                                        placeholder="+7 900 000-00-00"
+                                        placeholder="+7-900-000-00-00"
+                                        value={phoneValue}
+                                        onFocus={handlePhoneFocus}
+                                        onBlur={handlePhoneBlur}
+                                        onChange={handlePhoneChange}
                                     />
                                 </div>
                             )}
