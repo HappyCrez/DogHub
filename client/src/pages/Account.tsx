@@ -6,6 +6,7 @@ import {
 import { Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
+    API_BASE_URL,
     getUsers,
     getEvents,
     getPeopleTrainings,
@@ -568,21 +569,19 @@ export default function Account() {
                                             <div className="flex items-center justify-between gap-2">
                                                 <div>
                                                     <div className="flex flex-wrap items-center gap-1.5">
-                                                        <span className="text-sm font-semibold">
-                                                            {dog.name}
-                                                        </span>
+                        <span className="text-sm font-semibold">
+                            {dog.name}
+                        </span>
                                                         {dog.breed && (
                                                             <span className="text-[11px] uppercase tracking-wide text-gray-400">
-                                                                {dog.breed}
-                                                            </span>
+                                {dog.breed}
+                            </span>
                                                         )}
                                                     </div>
                                                     {dog.birthDate && (
                                                         <p className="text-[11px] text-gray-500">
                                                             Дата рождения:{" "}
-                                                            {new Date(
-                                                                dog.birthDate
-                                                            ).toLocaleDateString("ru-RU")}
+                                                            {new Date(dog.birthDate).toLocaleDateString("ru-RU")}
                                                         </p>
                                                     )}
                                                 </div>
@@ -593,17 +592,29 @@ export default function Account() {
                                                                 key={tag}
                                                                 className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800"
                                                             >
-                                                                #{tag}
-                                                            </span>
+                                #{tag}
+                            </span>
                                                         ))}
                                                     </div>
                                                 )}
                                             </div>
+
                                             {dog.bio && (
                                                 <p className="mt-1 text-xs text-gray-600">
                                                     {dog.bio}
                                                 </p>
                                             )}
+
+                                            {/* Кнопка скачивания отчёта */}
+                                            <div className="mt-2">
+                                                <a
+                                                    href={`${API_BASE_URL}/dogs/report/${dog.id}`}
+                                                    download
+                                                    className="inline-flex items-center rounded-xl border border-amber-200 bg-white px-3 py-1.5 text-[11px] font-medium text-amber-800 shadow-sm transition hover:bg-amber-50"
+                                                >
+                                                    📄 Скачать отчёт
+                                                </a>
+                                            </div>
                                         </div>
                                     </li>
                                 ))}
