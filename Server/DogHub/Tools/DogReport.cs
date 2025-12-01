@@ -7,21 +7,12 @@ using iText.IO.Font;
 using System.Globalization;
 using System.Reflection;
 
-public sealed class DogReport
+public class DogReport
 {
-    private static readonly Lazy<DogReport> _instance = 
-        new Lazy<DogReport>(() => new DogReport());
-    
-    public static DogReport Instance => _instance.Value;
-    
-    private readonly PdfFont font;
-    
-    private DogReport()
-    {
-        font = FontMaker.CreateFont();
-    }
+    private static readonly PdfFont font = FontMaker.CreateFont();
+    private byte[] reportBytes = []; 
 
-    public byte[] CreateReport(int dogId)
+    private byte[] CreateReport(int dogId)
     {
         using (var ms = new MemoryStream())
         {
@@ -103,5 +94,15 @@ public sealed class DogReport
     {
         table.AddCell(new Cell().Add(new Paragraph(label).SetFont(font).SetFontSize(12)).SetPadding(5));
         table.AddCell(new Cell().Add(new Paragraph(value).SetFont(font).SetFontSize(12)).SetPadding(5));
+    }
+
+    public DogReport(int dogId)
+    {
+        reportBytes = CreateReport(dogId);
+    }
+
+    public byte[] GetBytes()
+    {
+        return reportBytes;
     }
 }

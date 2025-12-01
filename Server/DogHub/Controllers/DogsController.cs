@@ -47,8 +47,7 @@ public class DogsController : ControllerBase
     {
         try
         {
-            var pdfBytes = DogReport.Instance.CreateReport(id);
-            return File(pdfBytes, "application/pdf", $"dog_report_{id}.pdf");
+            return File(new DogReport(id).GetBytes(), "application/pdf", $"dog_report_{id}.pdf");
         }
         catch (Exception ex)
         {
