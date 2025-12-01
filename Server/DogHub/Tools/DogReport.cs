@@ -21,50 +21,21 @@ public class DogReport
     // Класс модели для десериализации JSON
     private class DogResume
     {
-        [JsonPropertyName("id")]
         public int Id { get; set; }
-        
-        [JsonPropertyName("dogName")]
-        public string DogName { get; set; } = string.Empty;
-        
-        [JsonPropertyName("breed")]
-        public string Breed { get; set; } = string.Empty;
-        
-        [JsonPropertyName("sex")]
-        public string Sex { get; set; } = string.Empty;
-        
-        [JsonPropertyName("birthDate")]
-        public DateTime? BirthDate { get; set; }
-        
-        [JsonPropertyName("chipNumber")]
-        public string? ChipNumber { get; set; }
-        
-        [JsonPropertyName("photo")]
-        public string? Photo { get; set; }
-        
-        [JsonPropertyName("dogBio")]
-        public string? DogBio { get; set; }
-        
-        [JsonPropertyName("tags")]
-        public List<string>? Tags { get; set; }
-        
-        [JsonPropertyName("ownerName")]
-        public string OwnerName { get; set; } = string.Empty;
-        
-        [JsonPropertyName("ownerPhone")]
-        public string OwnerPhone { get; set; } = string.Empty;
-        
-        [JsonPropertyName("ownerEmail")]
-        public string OwnerEmail { get; set; } = string.Empty;
-        
-        [JsonPropertyName("programCount")]
-        public int ProgramCount { get; set; }
-        
-        [JsonPropertyName("serviceCount")]
-        public int ServiceCount { get; set; }
-        
-        [JsonPropertyName("eventCount")]
-        public int EventCount { get; set; }
+        public string DogName   { get; set; } = string.Empty;
+        public string Breed     { get; set; } = string.Empty;
+        public string Sex       { get; set; } = string.Empty;
+        public DateTime? BirthDate  { get; set; }
+        public string? ChipNumber   { get; set; }
+        public string? Photo        { get; set; }
+        public string? DogBio       { get; set; }
+        public List<string>? Tags   { get; set; }
+        public string OwnerName     { get; set; } = string.Empty;
+        public string OwnerPhone    { get; set; } = string.Empty;
+        public string OwnerEmail    { get; set; } = string.Empty;
+        public int ProgramCount     { get; set; }
+        public int ServiceCount     { get; set; }
+        public int EventCount       { get; set; }
     }
 
     private byte[] reportBytes = [];
@@ -245,13 +216,11 @@ public class DogReport
                     var imageContainer = new Div().Add(image);
                     
                     photoContainer.Add(imageContainer);
-                    return photoContainer;
                 }
             }
             catch
-            {
-                // Если не удалось загрузить фото, показываем заглушку
-            }
+            { /* Если не удалось загрузить фото, показываем пустой блок */ }
+            return photoContainer;
         }
         
         // Заглушка для фото
