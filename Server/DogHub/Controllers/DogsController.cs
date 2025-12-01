@@ -47,8 +47,11 @@ public class DogsController : ControllerBase
     {
         try
         {
-            var pdfBytes = DogReport.Instance.CreateReport(id);
-            return File(pdfBytes, "application/pdf", $"dog_report_{id}.pdf");
+            string sql = _sql.GetCommand("dog_report_info");
+            var ownerParams = new Dictionary<string, object?> { ["id"] = id };
+            string dogData = _db.ExecuteSQL(sql, ownerParams);
+            // return Content(dogData, "application/json");
+            return File(new DogReport(dogData).GetBytes(), "application/pdf", $"dog_report_{id}.pdf");
         }
         catch (Exception ex)
         {

@@ -20,6 +20,7 @@ public class AppConfig
 
     // Состояние программы
     public readonly LogLevels LogLevel;
+    public readonly string PathToFonts;
 
     // Параметры базы данных
     public readonly string DbHost;
@@ -70,11 +71,11 @@ public class AppConfig
         DbPassword = GetValueFromEnv("DB_PASSWORD");
 
         // Если MailService отключён, остальные параметры заполняются "NONE"
-        MailService = GetValueFromEnv("MAIL_SERVICE") == "ON";
-        MailHost = this.MailService ? GetValueFromEnv("MAIL_HOST") : "NONE";
-        MailTimeout = this.MailService ? GetValueFromEnv("MAIL_TIMEOUT") : "NONE";
-        MailFilePath = this.MailService ? GetValueFromEnv("MAIL_FILEPATH") : "NONE";
-        MailPassword = this.MailService ? GetValueFromEnv("MAIL_PASSWORD") : "NONE";
+        MailService  = GetValueFromEnv("MAIL_SERVICE") == "ON";
+        MailHost     = MailService ? GetValueFromEnv("MAIL_HOST") : "NONE";
+        MailTimeout  = MailService ? GetValueFromEnv("MAIL_TIMEOUT") : "NONE";
+        MailFilePath = MailService ? GetValueFromEnv("MAIL_FILEPATH") : "NONE";
+        MailPassword = MailService ? GetValueFromEnv("MAIL_PASSWORD") : "NONE";
 
         // JWT
         jwtIssuer = GetValueFromEnv("JWT_ISSUER") ?? "DogHubApi";
@@ -85,6 +86,8 @@ public class AppConfig
             GetValueFromEnv("ACCESS_TOKEN_LIFETIME_MINUTES"),
             out var minutes)
             ? minutes : 30;
+
+        PathToFonts = GetValueFromEnv("PATH_TO_FONTS"); 
     }
 
     /// <summary>
