@@ -173,27 +173,35 @@ export default function Navbar() {
                 {/* Мобильная версия: кнопка-бургер */}
                 <button
                     type="button"
-                    className="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black md:hidden"
-                    aria-label="Открыть меню"
+                    className="inline-flex items-center justify-center rounded-lg p-1 text-gray-900 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black md:hidden"
+                    aria-label={mobileOpen ? "Закрыть меню" : "Открыть меню"}
                     aria-expanded={mobileOpen}
                     onClick={() => setMobileOpen((open) => !open)}
                 >
-                    {/* Иконка: три полоски / крестик */}
                     <span className="sr-only">Меню</span>
-                    <div className="flex h-4 w-4 flex-col justify-between">
+                    <div className="relative h-4 w-4">
+                        {/* верхняя линия */}
                         <span
-                            className={`block h-[2px] rounded-full bg-gray-900 transition-transform ${
-                                mobileOpen ? "translate-y-[6px] rotate-45" : ""
+                            className={`absolute left-0 right-0 h-[2px] rounded-full bg-gray-900 transition-transform duration-200 ${
+                                mobileOpen
+                                    ? "top-1/2 -translate-y-1/2 rotate-45"
+                                    : "top-0"
                             }`}
                         />
+                        {/* средняя линия */}
                         <span
-                            className={`block h-[2px] rounded-full bg-gray-900 transition-opacity ${
-                                mobileOpen ? "opacity-0" : "opacity-100"
+                            className={`absolute left-0 right-0 h-[2px] rounded-full bg-gray-900 transition-all duration-200 ${
+                                mobileOpen
+                                    ? "top-1/2 -translate-y-1/2 opacity-0"
+                                    : "top-1/2 -translate-y-1/2 opacity-100"
                             }`}
                         />
+                        {/* нижняя линия */}
                         <span
-                            className={`block h-[2px] rounded-full bg-gray-900 transition-transform ${
-                                mobileOpen ? "-translate-y-[6px] -rotate-45" : ""
+                            className={`absolute left-0 right-0 h-[2px] rounded-full bg-gray-900 transition-transform duration-200 ${
+                                mobileOpen
+                                    ? "top-1/2 -translate-y-1/2 -rotate-45"
+                                    : "bottom-0"
                             }`}
                         />
                     </div>
