@@ -20,6 +20,9 @@
   "dogs":
   "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.tags, d.bio, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dog d JOIN member u ON d.member_id = u.id ORDER BY u.full_name, d.name;",
 
+  "dog":
+  "SELECT * FROM dog WHERE id = @id",
+  
   "event_dogs":
   "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, o.full_name  AS owner_full_name, o.city AS owner_city, d.tags, d.bio FROM event_registration er JOIN dog d ON d.id = er.dog_id JOIN member o ON o.id = d.member_id WHERE er.event_id = @event_id;",
 
