@@ -530,18 +530,6 @@ export default function Account() {
                                         <span className="truncate">{currentMember.phone}</span>
                                     </div>
                                 )}
-                                {currentMember.city && (
-                                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
-                                        <span className="text-base">📍</span>
-                                        <span className="truncate">{currentMember.city}</span>
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
-                                    <span className="text-base">🎓</span>
-                                    <span className="truncate">
-                                        Уровень: базовый владелец (для примера)
-                                    </span>
-                                </div>
                             </div>
                         </div>
                     </div>
