@@ -14,97 +14,11 @@ public sealed class DogReport
     
     public static DogReport Instance => _instance.Value;
     
-    private readonly PdfFont _normalFont;
-    private readonly PdfFont _boldFont;
-    private readonly PdfFont _boldLargeFont;
+    private readonly PdfFont font;
     
     private DogReport()
     {
-        // Инициализация шрифтов с поддержкой кириллицы
-        try
-        {
-            // Способ 1: Используем системные шрифты
-            string fontsFolder = "/usr/share/fonts"; // для Linux
-            if (OperatingSystem.IsWindows())
-                fontsFolder = @"C:\Windows\Fonts";
-            else if (OperatingSystem.IsMacOS())
-                fontsFolder = "/Library/Fonts";
-            
-            // Попробуем найти Arial или аналогичный шрифт с поддержкой кириллицы
-            string fontPath = FindFontWithCyrillic(fontsFolder);
-            
-            if (!string.IsNullOrEmpty(fontPath))
-            {
-                _normalFont = PdfFontFactory.CreateFont(fontPath, PdfEncodings.IDENTITY_H);
-                _boldFont = PdfFontFactory.CreateFont(fontPath, PdfEncodings.IDENTITY_H);
-                _boldLargeFont = PdfFontFactory.CreateFont(fontPath, PdfEncodings.IDENTITY_H);
-            }
-            else
-            {
-                // Способ 2: Используем встроенный шрифт (если есть) или создаем базовый
-                _normalFont = CreateFallbackFont();
-                _boldFont = CreateFallbackFont();
-                _boldLargeFont = CreateFallbackFont();
-            }
-        }
-        catch (Exception ex)
-        {
-            // Способ 3: Создаем самый простой шрифт
-            _normalFont = CreateFallbackFont();
-            _boldFont = CreateFallbackFont();
-            _boldLargeFont = CreateFallbackFont();
-        }
-    }
-
-    private string FindFontWithCyrillic(string fontsFolder)
-    {
-        try
-        {
-            // Список шрифтов
-            string[] cyrillicFonts = {
-                "arial.ttf", "Arial.ttf",
-                "times.ttf", "Times.ttf", 
-                "tahoma.ttf", "Tahoma.ttf",
-                "verdana.ttf", "Verdana.ttf",
-                "DejaVuSans.ttf",
-                "LiberationSans-Regular.ttf"
-            };
-            
-            foreach (var fontFile in cyrillicFonts)
-            {
-                string fontPath = Path.Combine(fontsFolder, fontFile);
-                if (File.Exists(fontPath))
-                    return fontPath;
-                    
-                // Также проверяем поддиректории
-                if (Directory.Exists(fontsFolder))
-                {
-                    var allFonts = Directory.GetFiles(fontsFolder, "*" + fontFile, SearchOption.AllDirectories);
-                    if (allFonts.Length > 0)
-                        return allFonts[0];
-                }
-            }
-        }
-        catch
-        {
-            // Игнорируем ошибки поиска шрифтов
-        }
-        
-        return null;
-    }
-
-    private PdfFont CreateFallbackFont()
-    {
-        try
-        {
-            // Пытаемся использовать стандартный шрифт с правильной кодировкой
-            return PdfFontFactory.CreateFont("Helvetica", PdfEncodings.IDENTITY_H);
-        }
-        catch
-        {
-            // Последний резервный вариант
-            return PdfFontFactory.CreateFont();
-        }
+        font = FontMaker.CreateFont();
     }
 
     public byte[] CreateReport(int dogId)
@@ -127,7 +41,6 @@ public sealed class DogReport
             {
                 document.Close();
             }
-            
             return ms.ToArray();
         }
     }
@@ -135,7 +48,7 @@ public sealed class DogReport
     private void AddTitle(Document document, string title)
     {
         var titleParagraph = new Paragraph(title)
-            .SetFont(_boldLargeFont)
+            .SetFont(font)
             .SetFontSize(18)
             .SetTextAlignment(TextAlignment.CENTER)
             .SetMarginBottom(20);
@@ -146,7 +59,7 @@ public sealed class DogReport
     private void AddDogInfo(Document document, int dogId)
     {
         var sectionTitle = new Paragraph("Информация о собаке")
-            .SetFont(_boldFont)
+            .SetFont(font)
             .SetFontSize(14)
             .SetMarginBottom(10);
         
@@ -168,7 +81,7 @@ public sealed class DogReport
         
         // Дополнительная информация
         var infoParagraph = new Paragraph("Это тестовый отчет на русском языке")
-            .SetFont(_normalFont)
+            .SetFont(font)
             .SetFontSize(12)
             .SetMarginBottom(15);
         
@@ -178,7 +91,7 @@ public sealed class DogReport
     private void AddFooter(Document document)
     {
         var footer = new Paragraph($"Отчет сгенерирован: {DateTime.Now:dd.MM.yyyy HH:mm}")
-            .SetFont(_normalFont)
+            .SetFont(font)
             .SetFontSize(10)
             .SetTextAlignment(TextAlignment.RIGHT)
             .SetMarginTop(20);
@@ -188,7 +101,7 @@ public sealed class DogReport
 
     private void AddTableRow(Table table, string label, string value)
     {
-        table.AddCell(new Cell().Add(new Paragraph(label).SetFont(_boldFont).SetFontSize(12)).SetPadding(5));
-        table.AddCell(new Cell().Add(new Paragraph(value).SetFont(_normalFont).SetFontSize(12)).SetPadding(5));
+        table.AddCell(new Cell().Add(new Paragraph(label).SetFont(font).SetFontSize(12)).SetPadding(5));
+        table.AddCell(new Cell().Add(new Paragraph(value).SetFont(font).SetFontSize(12)).SetPadding(5));
     }
 }
