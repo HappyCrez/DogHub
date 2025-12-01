@@ -2,6 +2,7 @@ export const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 async function getJson<T>(path: string): Promise<T> {
+    console.log(API_BASE_URL);
     const res = await fetch(`${API_BASE_URL}${path}`, {
         method: "GET",
         headers: { Accept: "application/json" },
@@ -62,7 +63,7 @@ export function getDogs(): Promise<ApiDog[]> {
 
 // Только чипированные (chip_number IS NOT NULL)
 export function getChippedDogs(): Promise<ApiDog[]> {
-    return getJson<ApiDog[]>("/chiped");
+    return getJson<ApiDog[]>("/dogs/chiped");
 }
 
 export interface ApiEventDogRow {
