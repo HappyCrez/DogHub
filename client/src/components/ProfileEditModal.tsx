@@ -2,10 +2,12 @@ import {
     useEffect,
     useState,
     type FormEvent,
+    type ChangeEvent,
 } from "react";
 import { motion } from "framer-motion";
 import { API_BASE_URL } from "../api/client";
 import type { MemberWithDogs } from "./MemberCard";
+import { CITY_OPTIONS } from "../pages/Auth";
 
 export interface ProfileEditPayload {
     fullName: string;
@@ -13,6 +15,30 @@ export interface ProfileEditPayload {
     email: string | null;
     city: string | null;
     bio: string | null;
+}
+
+// Форматируем 10 цифр после +7 в вид +7-XXX-XXX-XX-XX
+function formatRussianPhone(restDigits: string): string {
+    const digits = restDigits.replace(/\D/g, "").slice(0, 10); // максимум 10 цифр
+    const parts: string[] = [];
+
+    if (digits.length > 0) parts.push(digits.slice(0, 3));
+    if (digits.length > 3) parts.push(digits.slice(3, 6));
+    if (digits.length > 6) parts.push(digits.slice(6, 8));
+    if (digits.length > 8) parts.push(digits.slice(8, 10));
+
+    return "+7" + (parts.length ? "-" + parts.join("-") : "");
+}
+
+// Нормализуем телефон из профиля под ту же маску
+function normalizeInitialPhone(raw: string | null | undefined): string {
+    if (!raw) return "";
+    let digits = raw.replace(/\D/g, "");
+    if (digits.startsWith("7")) {
+        digits = digits.slice(1);
+    }
+    const formatted = formatRussianPhone(digits);
+    return formatted || "";
 }
 
 interface ProfileEditModalProps {
@@ -29,9 +55,11 @@ export function ProfileEditModal({
                                      onSaved,
                                  }: ProfileEditModalProps) {
     const [fullName, setFullName] = useState(member.fullName ?? "");
-    const [phone, setPhone] = useState(member.phone ?? "");
+    const [phone, setPhone] = useState(() => normalizeInitialPhone(member.phone));
     const [email, setEmail] = useState(member.email ?? "");
-    const [city, setCity] = useState(member.city ?? "");
+    const [cityInput, setCityInput] = useState(member.city ?? "");
+    const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+    const [showCityDropdown, setShowCityDropdown] = useState(false);
     const [bio, setBio] = useState(member.bio ?? "");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -40,14 +68,78 @@ export function ProfileEditModal({
     useEffect(() => {
         if (!open) return;
         setFullName(member.fullName ?? "");
-        setPhone(member.phone ?? "");
+        setPhone(normalizeInitialPhone(member.phone));
         setEmail(member.email ?? "");
-        setCity(member.city ?? "");
+        setCityInput(member.city ?? "");
+        setCitySuggestions([]);
+        setShowCityDropdown(false);
         setBio(member.bio ?? "");
         setError(null);
     }, [open, member]);
 
     if (!open) return null;
+
+    // === Телефон с маской +7-XXX-XXX-XX-XX ===
+    function handlePhoneFocus() {
+        // при фокусе, если ничего нет — подставляем "+7"
+        if (!phone) {
+            setPhone("+7");
+        }
+    }
+
+    function handlePhoneBlur() {
+        // если пользователь так и не ввёл цифры, очищаем поле
+        if (phone === "+7") {
+            setPhone("");
+        }
+    }
+
+    function handlePhoneChange(e: ChangeEvent<HTMLInputElement>) {
+        const value = e.target.value;
+
+        // все цифры из ввода
+        let digits = value.replace(/\D/g, "");
+
+        // первая "7" — это код страны, остальные — тело номера
+        if (digits.startsWith("7")) {
+            digits = digits.slice(1);
+        }
+
+        const formatted = formatRussianPhone(digits);
+        setPhone(formatted || "+7");
+    }
+
+    // === Подсказки городов ===
+    function handleCityChange(e: ChangeEvent<HTMLInputElement>) {
+        const value = e.target.value;
+        setCityInput(value);
+
+        const query = value.trim().toLowerCase();
+        if (query.length < 2) {
+            setCitySuggestions([]);
+            setShowCityDropdown(false);
+            return;
+        }
+
+        const suggestions = CITY_OPTIONS.filter((city) =>
+            city.toLowerCase().startsWith(query)
+        );
+        setCitySuggestions(suggestions);
+        setShowCityDropdown(suggestions.length > 0);
+    }
+
+    function handleCitySelect(city: string) {
+        setCityInput(city);
+        setCitySuggestions([]);
+        setShowCityDropdown(false);
+    }
+
+    function handleCityBlur() {
+        // Маленькая задержка, чтобы успел отработать onClick по пункту списка
+        setTimeout(() => {
+            setShowCityDropdown(false);
+        }, 100);
+    }
 
     async function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -62,11 +154,14 @@ export function ProfileEditModal({
             return;
         }
 
+        const phoneForApi =
+            phone && phone !== "+7" ? phone.trim() : null;
+
         const payloadForApi = {
             fullName: fullName.trim(),
-            phone: phone.trim() || null,
+            phone: phoneForApi,
             email: email.trim() || null,
-            city: city.trim() || null,
+            city: cityInput.trim() || null,
             ownerBio: bio.trim() || null,
         };
 
@@ -126,9 +221,7 @@ export function ProfileEditModal({
     }
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -171,21 +264,42 @@ export function ProfileEditModal({
                             <input
                                 type="tel"
                                 value={phone ?? ""}
-                                onChange={(e) => setPhone(e.target.value)}
+                                onChange={handlePhoneChange}
+                                onFocus={handlePhoneFocus}
+                                onBlur={handlePhoneBlur}
                                 className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none ring-0 transition focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-100"
-                                placeholder="+7..."
+                                placeholder="+7-900-000-00-00"
+                                inputMode="tel"
                             />
                         </div>
-                        <div>
+                        <div className="relative">
                             <label className="mb-1 block text-xs font-medium text-gray-700">
                                 Город
                             </label>
                             <input
                                 type="text"
-                                value={city ?? ""}
-                                onChange={(e) => setCity(e.target.value)}
+                                value={cityInput}
+                                onChange={handleCityChange}
+                                onBlur={handleCityBlur}
                                 className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none ring-0 transition focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-100"
+                                placeholder="Например, Романово"
+                                autoComplete="off"
                             />
+                            {showCityDropdown && citySuggestions.length > 0 && (
+                                <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-auto rounded-xl border border-gray-200 bg-white text-xs shadow-lg">
+                                    {citySuggestions.map((city) => (
+                                        <li key={city}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCitySelect(city)}
+                                                className="flex w-full items-center px-3 py-2 text-left hover:bg-amber-50"
+                                            >
+                                                {city}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                     </div>
 

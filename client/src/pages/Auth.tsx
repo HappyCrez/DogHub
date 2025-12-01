@@ -53,7 +53,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     return data as T;
 }
 
-const CITY_OPTIONS = [
+export const CITY_OPTIONS = [
     "Москва",
     "Санкт-Петербург",
     "Новосибирск",
