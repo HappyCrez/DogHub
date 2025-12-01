@@ -20,9 +20,6 @@
   "dogs":
   "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.tags, d.bio, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dog d JOIN member u ON d.member_id = u.id ORDER BY u.full_name, d.name;",
 
-  "dog":
-  "SELECT * FROM dog WHERE id = @id",
-  
   "event_dogs":
   "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, o.full_name  AS owner_full_name, o.city AS owner_city, d.tags, d.bio FROM event_registration er JOIN dog d ON d.id = er.dog_id JOIN member o ON o.id = d.member_id WHERE er.event_id = @event_id;",
 
@@ -39,6 +36,8 @@
   "SELECT m.id AS member_id, m.full_name, m.phone, m.email, m.city, m.avatar_url, m.bio AS owner_bio, m.join_date, m.membership_end_date, m.role, m.password_hash AS password_hash FROM member m WHERE m.email = @email;",
 
   "insert_member_for_auth":
-  "INSERT INTO member (full_name, phone, email, city, avatar_url, bio, join_date, membership_end_date, role, password_hash) VALUES (@full_name, @phone, @email, @city, NULL, NULL, CURRENT_DATE, NULL, 'Пользователь', @password_hash);"
-}
+  "INSERT INTO member (full_name, phone, email, city, avatar_url, bio, join_date, membership_end_date, role, password_hash) VALUES (@full_name, @phone, @email, @city, NULL, NULL, CURRENT_DATE, NULL, 'Пользователь', @password_hash);",
 
+  "dog_report_info":
+  "SELECT d.id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.bio AS dog_bio, d.tags, m.full_name AS owner_name, m.phone AS owner_phone, m.email AS owner_email, (SELECT COUNT(*) FROM program_registration pr WHERE pr.dog_id = d.id) AS program_count, (SELECT COUNT(*) FROM dog_service ds WHERE ds.dog_id = d.id) AS service_count, (SELECT COUNT(*) FROM event_registration er WHERE er.dog_id = d.id) AS event_count FROM dog d LEFT JOIN member m ON d.member_id = m.id WHERE d.id = @id;"
+}

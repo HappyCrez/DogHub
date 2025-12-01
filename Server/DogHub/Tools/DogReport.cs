@@ -18,31 +18,59 @@ using System.Net;
 
 public class DogReport
 {
-    // Класс модели таблицы собак
-    private class Dog
+    // Класс модели для десериализации JSON
+    private class DogResume
     {
+        [JsonPropertyName("id")]
         public int Id { get; set; }
-        public int MemberId { get; set; } = -1;
-        public string Name { get; set; } = string.Empty;
+        
+        [JsonPropertyName("dogName")]
+        public string DogName { get; set; } = string.Empty;
+        
+        [JsonPropertyName("breed")]
         public string Breed { get; set; } = string.Empty;
-        public SexEnum Sex { get; set; } = SexEnum.M;
+        
+        [JsonPropertyName("sex")]
+        public string Sex { get; set; } = string.Empty;
+        
+        [JsonPropertyName("birthDate")]
         public DateTime? BirthDate { get; set; }
+        
+        [JsonPropertyName("chipNumber")]
         public string? ChipNumber { get; set; }
+        
+        [JsonPropertyName("photo")]
         public string? Photo { get; set; }
-        public string? Bio { get; set; }
+        
+        [JsonPropertyName("dogBio")]
+        public string? DogBio { get; set; }
+        
+        [JsonPropertyName("tags")]
         public List<string>? Tags { get; set; }
-    }
-
-    public enum SexEnum
-    {
-        M,
-        F
+        
+        [JsonPropertyName("ownerName")]
+        public string OwnerName { get; set; } = string.Empty;
+        
+        [JsonPropertyName("ownerPhone")]
+        public string OwnerPhone { get; set; } = string.Empty;
+        
+        [JsonPropertyName("ownerEmail")]
+        public string OwnerEmail { get; set; } = string.Empty;
+        
+        [JsonPropertyName("programCount")]
+        public int ProgramCount { get; set; }
+        
+        [JsonPropertyName("serviceCount")]
+        public int ServiceCount { get; set; }
+        
+        [JsonPropertyName("eventCount")]
+        public int EventCount { get; set; }
     }
 
     private byte[] reportBytes = [];
     private readonly PdfFont font;
     private readonly PdfFont boldFont;
-    private List<Dog> dogList;
+    private List<DogResume> dogList;
     private readonly HttpClient httpClient;
 
     private byte[] CreateReport()
@@ -55,11 +83,18 @@ public class DogReport
             
             try
             {
+                // Если несколько собак - добавляем общий заголовок
+                if (dogList.Count > 1)
+                {
+                    AddReportHeader(document, $"Профили собак ({dogList.Count})");
+                }
+                
                 // Для каждой собаки добавляем раздел
                 for (int i = 0; i < dogList.Count; ++i)
                 {
-                    AddDogSection(document, dogList[i]);
+                    AddDogResume(document, dogList[i], i + 1);
                     
+                    // Добавляем разрыв страницы, если это не последняя собака
                     if (i != dogList.Count - 1)
                     {
                         document.Add(new AreaBreak(AreaBreakType.NEXT_PAGE));
@@ -74,201 +109,227 @@ public class DogReport
         }
     }
 
-    private void AddDogSection(Document document, Dog dog)
+    private void AddReportHeader(Document document, string title)
     {
-        // Добавляем фото и заголовок
-        AddPhotoAndHeader(document, dog);
+        var header = new Paragraph(title)
+            .SetFont(boldFont)
+            .SetFontSize(20)
+            .SetTextAlignment(TextAlignment.CENTER)
+            .SetMarginBottom(30);
         
-        // Раздел "Основная информация"
-        AddBasicInfoSection(document, dog);
-        
-        // Раздел "Теги и особенности"
-        AddTagsSection(document, dog);
-        
-        // Раздел "Биография"
-        AddBioSection(document, dog);
-        
-        // Футер
-        AddReportFooter(document);
+        document.Add(header);
     }
 
-    private void AddPhotoAndHeader(Document document, Dog dog)
+    private void AddDogResume(Document document, DogResume dog, int dogNumber)
     {
-        // Создаем таблицу для размещения фото и текста рядом
-        var headerTable = new Table(2, false)
+        // Шапка резюме с фото и основной информацией
+        AddResumeHeader(document, dog, dogNumber);
+        
+        // Контактная информация владельца
+        AddContactSection(document, dog);
+        
+        // Статистика активности
+        AddActivityStatsSection(document, dog);
+        
+        // Теги и особенности
+        AddTagsSection(document, dog);
+        
+        // Биография
+        AddBioSection(document, dog);
+        
+        // Футер с датой создания
+        AddResumeFooter(document);
+    }
+
+    private void AddResumeHeader(Document document, DogResume dog, int dogNumber)
+    {
+        // Контейнер для шапки резюме
+        var headerContainer = new Div()
+            .SetMarginBottom(30);
+        
+        // Номер собаки в отчете (если несколько)
+        if (dogList.Count > 1)
+        {
+            var dogNumberText = new Paragraph($"Профиль #{dogNumber}")
+                .SetFont(font)
+                .SetFontSize(12)
+                .SetFontColor(new DeviceRgb(100, 100, 100))
+                .SetMarginBottom(5);
+            headerContainer.Add(dogNumberText);
+        }
+        
+        // Основная информация в таблице (фото + текст)
+        var headerTable = new Table(new float[] { 1, 2 }, false)
             .SetWidth(UnitValue.CreatePercentValue(100))
             .SetMarginBottom(20);
         
-        // Ячейка с фото (30% ширины)
+        // Ячейка с фото
         var photoCell = new Cell()
-            .SetWidth(UnitValue.CreatePercentValue(30))
+            .SetBorder(Border.NO_BORDER)
+            .SetVerticalAlignment(VerticalAlignment.MIDDLE)
+            .SetPaddingRight(20);
+        
+        // Получаем фото как IBlockElement (Div)
+        var photoElement = GetDogPhotoElement(dog.Photo);
+        photoCell.Add(photoElement);
+        
+        // Ячейка с текстовой информацией
+        var infoCell = new Cell()
             .SetBorder(Border.NO_BORDER)
             .SetVerticalAlignment(VerticalAlignment.MIDDLE);
         
-        // Добавляем фото, если оно есть
-        if (!string.IsNullOrEmpty(dog.Photo))
+        // Имя собаки
+        var nameParagraph = new Paragraph(dog.DogName)
+            .SetFont(boldFont)
+            .SetFontSize(28)
+            .SetMarginBottom(5);
+        
+        // Порода и пол
+        var breedSexParagraph = new Paragraph($"{dog.Breed} • {GetSexDisplayName(dog.Sex)}")
+            .SetFont(font)
+            .SetFontSize(16)
+            .SetFontColor(new DeviceRgb(100, 100, 100))
+            .SetMarginBottom(10);
+        
+        // Возраст и дата рождения
+        string ageInfo = "";
+        if (dog.BirthDate.HasValue)
+        {
+            ageInfo = $"{CalculateAge(dog.BirthDate.Value)} • Родился: {dog.BirthDate.Value:dd.MM.yyyy}";
+        }
+        else
+        {
+            ageInfo = "Дата рождения не указана";
+        }
+        
+        var ageParagraph = new Paragraph(ageInfo)
+            .SetFont(font)
+            .SetFontSize(14)
+            .SetMarginBottom(5);
+        
+        infoCell.Add(nameParagraph);
+        infoCell.Add(breedSexParagraph);
+        infoCell.Add(ageParagraph);
+        
+        headerTable.AddCell(photoCell);
+        headerTable.AddCell(infoCell);
+        headerContainer.Add(headerTable);
+        
+        // Разделительная линия
+        AddSectionSeparator(document);
+        
+        document.Add(headerContainer);
+    }
+
+    private Div GetDogPhotoElement(string? photoUrl)
+    {
+        var photoContainer = new Div()
+            .SetWidth(200)
+            .SetHeight(200)
+            .SetHorizontalAlignment(HorizontalAlignment.CENTER);
+        
+        if (!string.IsNullOrEmpty(photoUrl))
         {
             try
             {
-                var image = LoadImageFromUrl(dog.Photo);
+                var image = LoadImageFromUrl(photoUrl);
                 if (image != null)
                 {
-                    // Настраиваем размер изображения
-                    image.SetMaxWidth(150);
-                    image.SetMaxHeight(150);
+                    // Настраиваем размер фото с сохранением пропорций
+                    image.SetMaxWidth(200);
+                    image.SetMaxHeight(200);
                     image.SetHorizontalAlignment(HorizontalAlignment.CENTER);
                     image.SetAutoScale(true);
                     
+                    // Добавляем обводку и скругленные углы через контейнер
                     var imageContainer = new Div().Add(image);
-                    photoCell.Add(imageContainer);
-                }
-                else
-                {
-                    // Заглушка, если фото не загрузилось
-                    photoCell.Add(CreatePhotoPlaceholder());
+                    
+                    photoContainer.Add(imageContainer);
+                    return photoContainer;
                 }
             }
             catch
             {
-                // В случае ошибки добавляем заглушку
-                photoCell.Add(CreatePhotoPlaceholder());
+                // Если не удалось загрузить фото, показываем заглушку
             }
         }
-        else
-        {
-            // Заглушка, если фото нет
-            photoCell.Add(CreatePhotoPlaceholder());
-        }
         
-        // Ячейка с текстовой информацией (70% ширины)
-        var infoCell = new Cell()
-            .SetWidth(UnitValue.CreatePercentValue(70))
-            .SetBorder(Border.NO_BORDER)
-            .SetVerticalAlignment(VerticalAlignment.MIDDLE)
-            .SetPaddingLeft(20);
-        
-        // Имя собаки как основной заголовок
-        var nameParagraph = new Paragraph(dog.Name)
-            .SetFont(boldFont)
-            .SetFontSize(24)
-            .SetMarginBottom(5);
-        
-        // Порода и пол как подзаголовок
-        var breedParagraph = new Paragraph($"{dog.Breed} • {GetSexDisplayName(dog.Sex)}")
-            .SetFont(font)
-            .SetFontSize(16)
-            .SetFontColor(ColorConstants.GRAY)
-            .SetMarginBottom(15);
-        
-        // ID собаки под заголовком
-        var idParagraph = new Paragraph($"ID: {dog.Id}")
-            .SetFont(font)
-            .SetFontSize(12)
-            .SetFontColor(ColorConstants.DARK_GRAY);
-        
-        infoCell.Add(nameParagraph);
-        infoCell.Add(breedParagraph);
-        infoCell.Add(idParagraph);
-        
-        // Добавляем ячейки в таблицу
-        headerTable.AddCell(photoCell);
-        headerTable.AddCell(infoCell);
-        
-        document.Add(headerTable);
-        
-        // Разделительная линия
-        AddSeparatorLine(document);
-    }
-
-    private Image? LoadImageFromUrl(string imageUrl)
-    {
-        try
-        {
-            // Загружаем изображение через HttpClient
-            using var response = httpClient.GetAsync(imageUrl).Result;
-            if (response.IsSuccessStatusCode)
-            {
-                using var stream = response.Content.ReadAsStreamAsync().Result;
-                using var ms = new MemoryStream();
-                stream.CopyTo(ms);
-                return new Image(ImageDataFactory.Create(ms.ToArray()));
-            }
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private Div CreatePhotoPlaceholder()
-    {
-        // Создаем стилизованную заглушку для фото
+        // Заглушка для фото
         var placeholder = new Div()
-            .SetWidth(150)
-            .SetHeight(150)
+            .SetWidth(160)
+            .SetHeight(160)
             .SetBackgroundColor(new DeviceRgb(240, 240, 240))
-            .SetBorder(new SolidBorder(1))
+            .SetBorder(new SolidBorder(new DeviceRgb(200, 200, 200), 1))
+            .SetBorderRadius(new BorderRadius(10))
             .SetHorizontalAlignment(HorizontalAlignment.CENTER)
             .SetVerticalAlignment(VerticalAlignment.MIDDLE);
         
-        var text = new Paragraph("Фото\nотсутствует")
+        var placeholderText = new Paragraph("Фото\nпитомца")
             .SetFont(font)
-            .SetFontSize(11)
+            .SetFontSize(12)
             .SetTextAlignment(TextAlignment.CENTER)
-            .SetFontColor(ColorConstants.GRAY);
+            .SetFontColor(new DeviceRgb(150, 150, 150));
         
-        placeholder.Add(text);
-        return placeholder;
+        placeholder.Add(placeholderText);
+        photoContainer.Add(placeholder);
+        
+        return photoContainer;
     }
 
-    private void AddBasicInfoSection(Document document, Dog dog)
+    private void AddContactSection(Document document, DogResume dog)
     {
-        var sectionTitle = new Paragraph("Основная информация")
+        var sectionTitle = new Paragraph("Контактная информация владельца")
             .SetFont(boldFont)
             .SetFontSize(18)
             .SetMarginBottom(15);
         
         document.Add(sectionTitle);
         
-        // Таблица для основной информации
-        var infoTable = new Table(2, false)
+        // Таблица с контактной информацией
+        var contactTable = new Table(2, false)
             .SetWidth(UnitValue.CreatePercentValue(100))
-            .SetMarginBottom(20);
+            .SetMarginBottom(25);
         
-        // ID владельца
-        AddInfoRow(infoTable, "ID владельца", dog.MemberId.ToString());
+        // Владелец
+        AddContactRow(contactTable, "👤 Владелец", dog.OwnerName);
         
-        // Дата рождения
-        string birthDateText = dog.BirthDate.HasValue 
-            ? $"{dog.BirthDate.Value:dd.MM.yyyy} ({CalculateAge(dog.BirthDate.Value)})"
-            : "Не указана";
-        AddInfoRow(infoTable, "Дата рождения", birthDateText);
+        // Телефон
+        if (!string.IsNullOrEmpty(dog.OwnerPhone))
+        {
+            AddContactRow(contactTable, "📱 Телефон", dog.OwnerPhone);
+        }
+        
+        // Email
+        if (!string.IsNullOrEmpty(dog.OwnerEmail))
+        {
+            AddContactRow(contactTable, "📧 Email", dog.OwnerEmail);
+        }
         
         // Номер чипа
-        AddInfoRow(infoTable, "Номер чипа", dog.ChipNumber ?? "Не чипирована");
+        if (!string.IsNullOrEmpty(dog.ChipNumber))
+        {
+            AddContactRow(contactTable, "🔖 Номер чипа", dog.ChipNumber);
+        }
         
-        document.Add(infoTable);
+        document.Add(contactTable);
     }
 
-    private void AddInfoRow(Table table, string label, string value)
+    private void AddContactRow(Table table, string label, string value)
     {
-        // Ячейка с меткой
         var labelCell = new Cell()
-            .Add(new Paragraph($"{label}:")
+            .Add(new Paragraph(label)
                 .SetFont(boldFont)
                 .SetFontSize(12))
-            .SetPadding(5)
+            .SetPadding(8)
             .SetWidth(UnitValue.CreatePercentValue(30))
             .SetBorder(Border.NO_BORDER)
-            .SetBackgroundColor(new DeviceRgb(245, 245, 245));
+            .SetBackgroundColor(new DeviceRgb(250, 250, 250));
         
-        // Ячейка со значением
         var valueCell = new Cell()
             .Add(new Paragraph(value)
                 .SetFont(font)
                 .SetFontSize(12))
-            .SetPadding(5)
+            .SetPadding(8)
             .SetWidth(UnitValue.CreatePercentValue(70))
             .SetBorder(Border.NO_BORDER);
         
@@ -276,32 +337,127 @@ public class DogReport
         table.AddCell(valueCell);
     }
 
-    private void AddTagsSection(Document document, Dog dog)
+    private void AddActivityStatsSection(Document document, DogResume dog)
     {
-        if (dog.Tags == null || dog.Tags.Count == 0)
-            return;
-            
-        var sectionTitle = new Paragraph("Теги и особенности")
+        var sectionTitle = new Paragraph("Активность в питомнике")
             .SetFont(boldFont)
             .SetFontSize(18)
             .SetMarginBottom(15);
         
         document.Add(sectionTitle);
         
-        // Создаем контейнер для тегов
+        // Контейнер для статистики
+        var statsContainer = new Div()
+            .SetMarginBottom(25);
+        
+        // Таблица с 3 колонками для статистики
+        var statsTable = new Table(3, false)
+            .SetWidth(UnitValue.CreatePercentValue(100));
+        
+        // Программы
+        AddStatCard(statsTable, "📚 Программы", dog.ProgramCount.ToString(), 
+            new DeviceRgb(74, 144, 226));
+        
+        // Услуги
+        AddStatCard(statsTable, "⚕️ Услуги", dog.ServiceCount.ToString(), 
+            new DeviceRgb(46, 204, 113));
+        
+        // Мероприятия
+        AddStatCard(statsTable, "🎉 Мероприятия", dog.EventCount.ToString(), 
+            new DeviceRgb(155, 89, 182));
+        
+        statsContainer.Add(statsTable);
+        
+        // Описание активности
+        var activityDescription = GetActivityDescription(dog);
+        if (!string.IsNullOrEmpty(activityDescription))
+        {
+            var descriptionParagraph = new Paragraph(activityDescription)
+                .SetFont(font)
+                .SetFontSize(12)
+                .SetFontColor(new DeviceRgb(100, 100, 100))
+                .SetTextAlignment(TextAlignment.CENTER)
+                .SetMarginTop(10);
+            
+            statsContainer.Add(descriptionParagraph);
+        }
+        
+        document.Add(statsContainer);
+    }
+
+    private void AddStatCard(Table table, string title, string value, DeviceRgb color)
+    {
+        var cell = new Cell()
+            .SetBorder(Border.NO_BORDER)
+            .SetTextAlignment(TextAlignment.CENTER)
+            .SetPadding(15);
+        
+        // Заголовок карточки
+        var titleParagraph = new Paragraph(title)
+            .SetFont(font)
+            .SetFontSize(12)
+            .SetFontColor(new DeviceRgb(100, 100, 100))
+            .SetMarginBottom(5);
+        
+        // Значение
+        var valueParagraph = new Paragraph(value)
+            .SetFont(boldFont)
+            .SetFontSize(28)
+            .SetFontColor(color);
+        
+        cell.Add(titleParagraph);
+        cell.Add(valueParagraph);
+        table.AddCell(cell);
+    }
+
+    private string GetActivityDescription(DogResume dog)
+    {
+        int totalActivities = dog.ProgramCount + dog.ServiceCount + dog.EventCount;
+        
+        if (totalActivities == 0)
+            return "Собака пока не принимала участия в активностях питомника";
+        
+        var descriptions = new List<string>();
+        
+        if (dog.ProgramCount > 0)
+            descriptions.Add($"{dog.ProgramCount} программа(м)");
+        
+        if (dog.ServiceCount > 0)
+            descriptions.Add($"{dog.ServiceCount} услуг(а)");
+        
+        if (dog.EventCount > 0)
+            descriptions.Add($"{dog.EventCount} мероприятие(ий)");
+        
+        return $"Принял(а) участие в: {string.Join(", ", descriptions)}";
+    }
+
+    private void AddTagsSection(Document document, DogResume dog)
+    {
+        if (dog.Tags == null || dog.Tags.Count == 0)
+            return;
+            
+        var sectionTitle = new Paragraph("Характер и особенности")
+            .SetFont(boldFont)
+            .SetFontSize(18)
+            .SetMarginBottom(15);
+        
+        document.Add(sectionTitle);
+        
         var tagsContainer = new Div()
-            .SetMarginBottom(20);
+            .SetMarginBottom(25);
         
         foreach (var tag in dog.Tags)
         {
-            // Создаем стилизованный элемент для каждого тега
             var tagElement = new Paragraph(tag)
                 .SetFont(font)
                 .SetFontSize(11)
                 .SetBackgroundColor(new DeviceRgb(230, 240, 255))
                 .SetBorder(new SolidBorder(new DeviceRgb(200, 220, 255), 1))
-                .SetBorderRadius(new BorderRadius(5))
-                .SetPadding(8)
+                .SetBorderRadius(new BorderRadius(15))
+                .SetPaddingLeft(12)
+                .SetPaddingRight(12)
+                .SetPaddingTop(6)
+                .SetPaddingBottom(6)
                 .SetMargin(3)
                 .SetTextAlignment(TextAlignment.CENTER);
             
@@ -311,60 +467,67 @@ public class DogReport
         document.Add(tagsContainer);
     }
 
-    private void AddBioSection(Document document, Dog dog)
+    private void AddBioSection(Document document, DogResume dog)
     {
-        if (string.IsNullOrEmpty(dog.Bio))
+        if (string.IsNullOrEmpty(dog.DogBio))
             return;
             
-        var sectionTitle = new Paragraph("Биография")
+        var sectionTitle = new Paragraph("О питомце")
             .SetFont(boldFont)
             .SetFontSize(18)
             .SetMarginBottom(15);
         
         document.Add(sectionTitle);
         
-        // Блок с биографией
-        var bioBlock = new Div()
+        var bioContainer = new Div()
             .SetBackgroundColor(new DeviceRgb(250, 250, 250))
             .SetBorder(new SolidBorder(new DeviceRgb(220, 220, 220), 1))
-            .SetBorderRadius(new BorderRadius(5))
+            .SetBorderRadius(new BorderRadius(8))
             .SetPadding(20)
-            .SetMarginBottom(20);
+            .SetMarginBottom(25);
         
-        var bioText = new Paragraph(dog.Bio)
+        var bioText = new Paragraph(dog.DogBio)
             .SetFont(font)
-            .SetFontSize(12)
+            .SetFontSize(13)
             .SetTextAlignment(TextAlignment.JUSTIFIED);
         
-        bioBlock.Add(bioText);
-        document.Add(bioBlock);
+        bioContainer.Add(bioText);
+        document.Add(bioContainer);
     }
 
-    private void AddSeparatorLine(Document document)
+    private void AddResumeFooter(Document document)
     {
-        // Создаем линию с помощью таблицы
-        var lineTable = new Table(1, false)
-            .SetWidth(UnitValue.CreatePercentValue(100))
-            .SetHorizontalAlignment(HorizontalAlignment.CENTER)
-            .SetMarginTop(10)
-            .SetMarginBottom(20);
+        var footerContainer = new Div()
+            .SetMarginTop(30);
         
-        var lineCell = new Cell()
+        var dateParagraph = new Paragraph($"Отчет сформирован: {DateTime.Now:dd.MM.yyyy, HH:mm}")
+            .SetFont(font)
+            .SetFontSize(10)
+            .SetTextAlignment(TextAlignment.CENTER)
+            .SetFontColor(new DeviceRgb(150, 150, 150));
+        
+        footerContainer.Add(dateParagraph);
+        document.Add(footerContainer);
+    }
+
+    private void AddSectionSeparator(Document document)
+    {
+        var separator = new Div()
             .SetHeight(1)
             .SetBackgroundColor(new DeviceRgb(220, 220, 220))
-            .SetBorder(Border.NO_BORDER);
+            .SetMarginTop(15)
+            .SetMarginBottom(20);
         
-        lineTable.AddCell(lineCell);
-        document.Add(lineTable);
+        document.Add(separator);
     }
 
-    private string GetSexDisplayName(SexEnum sex)
+    private string GetSexDisplayName(string sex)
     {
-        return sex switch
+        return sex?.ToUpper() switch
         {
-            SexEnum.M => "Мужской",
-            SexEnum.F => "Женский",
-            _ => sex.ToString()
+            "M" => "♂ Мальчик",
+            "F" => "♀ Девочка",
+            _ => sex ?? "Не указан"
         };
     }
 
@@ -403,23 +566,30 @@ public class DogReport
         }
     }
 
-    private void AddReportFooter(Document document)
+    private Image? LoadImageFromUrl(string imageUrl)
     {
-        var footer = new Paragraph($"Отчет сформирован {DateTime.Now:dd.MM.yyyy} в {DateTime.Now:HH:mm}")
-            .SetFont(font)
-            .SetFontSize(10)
-            .SetTextAlignment(TextAlignment.RIGHT)
-            .SetMarginTop(30)
-            .SetFontColor(ColorConstants.GRAY);
-        
-        document.Add(footer);
+        try
+        {
+            using var response = httpClient.GetAsync(imageUrl).Result;
+            if (response.IsSuccessStatusCode)
+            {
+                using var stream = response.Content.ReadAsStreamAsync().Result;
+                using var ms = new MemoryStream();
+                stream.CopyTo(ms);
+                return new Image(ImageDataFactory.Create(ms.ToArray()));
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public DogReport(string dogData)
     {
         try
         {
-            // Создаем HttpClient для загрузки изображений
             httpClient = new HttpClient();
             httpClient.Timeout = TimeSpan.FromSeconds(10);
             
@@ -430,7 +600,7 @@ public class DogReport
             };
             
             // Десериализуем список собак
-            dogList = JsonSerializer.Deserialize<List<Dog>>(dogData, options) 
+            dogList = JsonSerializer.Deserialize<List<DogResume>>(dogData, options) 
                 ?? throw new InvalidOperationException("Некорректные данные о собаках");
             
             if (dogList.Count == 0)
