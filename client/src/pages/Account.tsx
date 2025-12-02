@@ -356,6 +356,7 @@ export default function Account() {
                         email: payload.email,
                         city: payload.city,
                         ownerBio: payload.bio,
+                        avatarUrl: payload.avatarUrl ?? row.avatarUrl,
                     }
                     : row
             )

@@ -36,6 +36,14 @@ public class AppConfig
     public readonly string MailFilePath;
     public readonly string MailTimeout;
 
+    // Параметры SFTP для загрузки аватаров
+    public readonly string SshHost;
+    public readonly int SshPort;
+    public readonly string SshUser;
+    public readonly string SshPassword;
+    public readonly string AvatarRemoteDir;
+    public readonly string AvatarPublicBaseUrl;
+
     // Параметры JWT
     private readonly string jwtIssuer;
     private readonly string jwtAudience;
@@ -76,6 +84,16 @@ public class AppConfig
         MailTimeout  = MailService ? GetValueFromEnv("MAIL_TIMEOUT") : "NONE";
         MailFilePath = MailService ? GetValueFromEnv("MAIL_FILEPATH") : "NONE";
         MailPassword = MailService ? GetValueFromEnv("MAIL_PASSWORD") : "NONE";
+
+        // SSH / SFTP
+        SshHost = GetValueFromEnv("SSH_HOST");
+        SshPort = int.TryParse(GetValueFromEnv("SSH_PORT"), out var sshPort)
+            ? sshPort
+            : 22;
+        SshUser = GetValueFromEnv("SSH_USER");
+        SshPassword = GetValueFromEnv("SSH_PASSWORD");
+        AvatarRemoteDir = GetValueFromEnv("AVATAR_REMOTE_DIR");
+        AvatarPublicBaseUrl = GetValueFromEnv("AVATAR_PUBLIC_BASE_URL").TrimEnd('/');
 
         // JWT
         jwtIssuer = GetValueFromEnv("JWT_ISSUER") ?? "DogHubApi";

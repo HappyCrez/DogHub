@@ -284,3 +284,45 @@ export interface ApiEventMemberRow {
 export function getEventMembers(eventId: number): Promise<ApiEventMemberRow[]> {
     return getJson<ApiEventMemberRow[]>(`/event_members/${eventId}`);
 }
+
+export interface UploadAvatarResponse {
+    avatarUrl: string;
+}
+
+export async function uploadAvatar(
+    file: File,
+    token: string
+): Promise<UploadAvatarResponse> {
+    if (!token) {
+        throw new Error("Для загрузки фото нужен токен авторизации.");
+    }
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const res = await fetch(`${API_BASE_URL}/me/avatar`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+        },
+        body: formData,
+    });
+
+    let data: any = null;
+    try {
+        data = await res.json();
+    } catch {
+        // ignore
+    }
+
+    if (!res.ok) {
+        const message =
+            data && typeof data.error === "string"
+                ? data.error
+                : `Ошибка загрузки аватара (HTTP ${res.status})`;
+        throw new Error(message);
+    }
+
+    return data as UploadAvatarResponse;
+}

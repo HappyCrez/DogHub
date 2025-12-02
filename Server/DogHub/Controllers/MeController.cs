@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using DogHub;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
@@ -15,10 +16,12 @@ namespace DogHub.Controllers;
 public class MeController : ControllerBase
 {
     private readonly DataBaseModel _db;
+    private readonly AvatarStorage _avatarStorage;
 
-    public MeController(DataBaseModel db)
+    public MeController(DataBaseModel db, AvatarStorage avatarStorage)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _avatarStorage = avatarStorage ?? throw new ArgumentNullException(nameof(avatarStorage));
     }
 
     // GET /me — получить свои данные по токену
@@ -28,12 +31,8 @@ public class MeController : ControllerBase
         try
         {
             // Берём memberId из токена (claim "sub")
-            var memberIdStr =
-                User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ??
-                User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrWhiteSpace(memberIdStr) ||
-                !int.TryParse(memberIdStr, out var memberId))
+            var memberId = GetMemberId();
+            if (memberId == null)
             {
                 return Forbid();
             }
@@ -45,7 +44,7 @@ public class MeController : ControllerBase
 
             var parameters = new Dictionary<string, object?>
             {
-                ["id"] = memberId
+                ["id"] = memberId.Value
             };
 
             var json = _db.ExecuteSQL(sql, parameters);
@@ -64,6 +63,71 @@ public class MeController : ControllerBase
         }
     }
 
+    [HttpPost("avatar")]
+    [Consumes("multipart/form-data")]
+    public IActionResult UploadAvatar([FromForm] IFormFile? avatar)
+    {
+        try
+        {
+            var memberId = GetMemberId();
+            if (memberId == null)
+            {
+                return Forbid();
+            }
+
+            if (avatar == null)
+            {
+                return BadRequest(new { error = "Файл не найден в запросе." });
+            }
+
+            string avatarUrl;
+            try
+            {
+                avatarUrl = _avatarStorage.Upload(memberId.Value, avatar);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+
+            var parameters = new Dictionary<string, object?>
+            {
+                ["id"] = memberId.Value,
+                ["avatar_url"] = avatarUrl
+            };
+
+            var updateSql = "UPDATE member SET avatar_url = @avatar_url WHERE id = @id;";
+            var result = _db.ExecuteSQL(updateSql, parameters);
+
+            if (string.IsNullOrWhiteSpace(result))
+            {
+                return StatusCode(500, new { error = "Не удалось сохранить ссылку на аватар." });
+            }
+
+            return Ok(new { avatarUrl });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[UploadAvatar] {ex}");
+            return StatusCode(500, new { error = "Ошибка при загрузке аватара." });
+        }
+    }
+
+    private int? GetMemberId()
+    {
+        var memberIdStr =
+            User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ??
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrWhiteSpace(memberIdStr) ||
+            !int.TryParse(memberIdStr, out var memberId))
+        {
+            return null;
+        }
+
+        return memberId;
+    }
+
     // PUT /me — обновить свои данные:
     // fullName, phone, email, city, avatarUrl, ownerBio/bio
     [HttpPut]
@@ -72,12 +136,8 @@ public class MeController : ControllerBase
         try
         {
             // Берём memberId из токена
-            var memberIdStr =
-                User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ??
-                User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrWhiteSpace(memberIdStr) ||
-                !int.TryParse(memberIdStr, out var memberId))
+            var memberId = GetMemberId();
+            if (memberId == null)
             {
                 return Forbid();
             }
@@ -119,7 +179,7 @@ public class MeController : ControllerBase
                 });
             }
 
-            parameters["id"] = memberId;
+            parameters["id"] = memberId.Value;
 
             var sql =
                 $"UPDATE member SET {string.Join(", ", updates)} WHERE id = @id;";
@@ -137,7 +197,7 @@ public class MeController : ControllerBase
                 "bio AS owner_bio, join_date, membership_end_date, role " +
                 "FROM member WHERE id = @id;";
 
-            var resultJson = _db.ExecuteSQL(selectSql, new Dictionary<string, object?> { ["id"] = memberId });
+            var resultJson = _db.ExecuteSQL(selectSql, new Dictionary<string, object?> { ["id"] = memberId.Value });
 
             if (string.IsNullOrWhiteSpace(resultJson))
             {
