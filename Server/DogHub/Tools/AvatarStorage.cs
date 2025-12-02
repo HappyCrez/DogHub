@@ -53,11 +53,7 @@ public class AvatarStorage
         file.CopyTo(stream);
         stream.Position = 0;
 
-        using var client = new SftpClient(
-            _config.SshHost,
-            _config.SshPort,
-            _config.SshUser,
-            _config.SshPassword);
+        using var client = CreateClient();
 
         try
         {
@@ -80,6 +76,46 @@ public class AvatarStorage
         return $"{_config.AvatarPublicBaseUrl}/{fileName}";
     }
 
+    public void DeleteByUrl(string? avatarUrl)
+    {
+        if (!TryGetFileNameFromUrl(avatarUrl, out var fileName))
+        {
+            return;
+        }
+
+        var remotePath = $"{_remoteDirNormalized}{fileName}";
+
+        using var client = CreateClient();
+        try
+        {
+            client.Connect();
+            if (client.Exists(remotePath))
+            {
+                client.DeleteFile(remotePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AvatarStorage] Не удалось удалить старый аватар: {ex.Message}");
+        }
+        finally
+        {
+            if (client.IsConnected)
+            {
+                client.Disconnect();
+            }
+        }
+    }
+
+    private SftpClient CreateClient()
+    {
+        return new SftpClient(
+            _config.SshHost,
+            _config.SshPort,
+            _config.SshUser,
+            _config.SshPassword);
+    }
+
     private static string NormalizeRemoteDir(string dir)
     {
         if (string.IsNullOrWhiteSpace(dir))
@@ -94,6 +130,33 @@ public class AvatarStorage
         }
 
         return normalized;
+    }
+
+    private bool TryGetFileNameFromUrl(string? avatarUrl, out string fileName)
+    {
+        fileName = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            return false;
+        }
+
+        var baseUrl = _config.AvatarPublicBaseUrl;
+        if (!avatarUrl.StartsWith(baseUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var relative = avatarUrl[baseUrl.Length..].TrimStart('/');
+        if (string.IsNullOrWhiteSpace(relative) ||
+            relative.Contains('/') ||
+            relative.Contains('\\'))
+        {
+            return false;
+        }
+
+        fileName = relative;
+        return true;
     }
 
     private static string ResolveExtension(string? contentType, string originalFileName)
