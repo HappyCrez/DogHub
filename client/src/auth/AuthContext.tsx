@@ -28,6 +28,7 @@ interface AuthContextValue {
     user: AuthUser | null;
     token: string | null;
     isAuthenticated: boolean;
+    isReady: boolean;
     login: (payload: LoginPayload) => void;
     logout: () => void;
     updateUser: (updates: Partial<AuthUser>) => void;
@@ -39,6 +40,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [token, setToken] = useState<string | null>(null);
+    const [isReady, setIsReady] = useState(false);
     const tokenRef = useRef<string | null>(null);
     const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
@@ -151,6 +153,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Инициализация из localStorage при загрузке приложения
     useEffect(() => {
+        let cancelled = false;
+
         const init = async () => {
             try {
                 const storedToken = localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -177,11 +181,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } catch (e) {
                 console.error("Не удалось прочитать данные авторизации из localStorage:", e);
                 await refreshSession();
+            } finally {
+                if (!cancelled) {
+                    setIsReady(true);
+                }
             }
         };
 
         init();
         return () => {
+            cancelled = true;
             clearTimer();
         };
     }, [persistAuthState, refreshSession, scheduleNextRefresh]);
@@ -228,6 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         token,
         isAuthenticated: !!user && !!token,
+        isReady,
         login,
         logout,
         updateUser,

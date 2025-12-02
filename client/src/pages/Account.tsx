@@ -102,7 +102,7 @@ export default function Account() {
     const members = useMemo(() => groupUsers(rows), [rows]);
 
     // Достаём пользователя из контекста авторизации
-    const { user: authUser, isAuthenticated } = useAuth();
+    const { user: authUser, isAuthenticated, isReady } = useAuth();
 
     // Определяем id участника из объекта user, который вернул бэкенд
     const currentMemberId = useMemo(() => {
@@ -292,6 +292,14 @@ export default function Account() {
             cancelled = true;
         };
     }, [currentMember]);
+
+    if (!isReady) {
+        return (
+            <section className="px-4 py-8">
+                <p className="text-gray-600">Проверяем авторизацию…</p>
+            </section>
+        );
+    }
 
     // === ГАРД АВТОРИЗАЦИИ ===
     // Если пользователь не залогинен, страница ЛК недоступна — отправляем на /auth
