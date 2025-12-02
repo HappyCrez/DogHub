@@ -205,7 +205,7 @@ public class DogReport
         {
             try
             {
-                var image = LoadImageFromUrl(filename);
+                var image = LoadImageFromUrl(photoContainer, filename);
                 if (image != null)
                 {
                     // Настраиваем размер фото с сохранением пропорций
@@ -218,11 +218,11 @@ public class DogReport
                     var imageContainer = new Div().Add(image);
                     
                     photoContainer.Add(imageContainer);
+                    return photoContainer;
                 }
             }
             catch
             { /* Если не удалось загрузить фото, показываем пустой блок */ }
-            return photoContainer;
         }
         
         // Заглушка для фото
@@ -537,11 +537,11 @@ public class DogReport
         }
     }
 
-    private Image? LoadImageFromUrl(string filename)
+    private Image? LoadImageFromUrl(Div photo, string filename)
     {
         try
         {
-            string pathToFile = $"{AppConfig.Instance().ImageHost}/Dogs/{filename.Trim()}";
+            string pathToFile = $"{AppConfig.Instance().ImageHost}/{filename.Trim()}";
             using var response = httpClient.GetAsync(pathToFile).Result;
             Console.WriteLine(pathToFile);
             if (response.IsSuccessStatusCode)
