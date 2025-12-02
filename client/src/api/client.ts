@@ -2,7 +2,6 @@ export const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 async function getJson<T>(path: string): Promise<T> {
-    console.log(API_BASE_URL);
     const res = await fetch(`${API_BASE_URL}${path}`, {
         method: "GET",
         headers: { Accept: "application/json" },
@@ -13,6 +12,49 @@ async function getJson<T>(path: string): Promise<T> {
     }
 
     return res.json() as Promise<T>;
+}
+
+async function requestWithAuth<T>(
+    path: string,
+    token: string,
+    init: RequestInit = {}
+): Promise<T> {
+    const headers = new Headers(init.headers ?? {});
+    if (!headers.has("Accept")) headers.set("Accept", "application/json");
+    if (init.body && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+    }
+
+    if (!token) {
+        throw new Error("Для выполнения запроса нужен токен авторизации.");
+    }
+
+    headers.set("Authorization", `Bearer ${token}`);
+
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+        ...init,
+        headers,
+    });
+
+    let data: any = null;
+    try {
+        data = await res.json();
+    } catch {
+        // тела может не быть — игнорируем
+    }
+
+    if (!res.ok) {
+        const message =
+            data && typeof data.error === "string"
+                ? data.error
+                : `Ошибка HTTP ${res.status} при запросе ${path}`;
+        const error = new Error(message);
+        // @ts-expect-error добавляем статус для удобства UI
+        error.status = res.status;
+        throw error;
+    }
+
+    return data as T;
 }
 
 /* ===== события ===== */
@@ -84,6 +126,27 @@ export function getEventDogs(eventId: number): Promise<ApiEventDogRow[]> {
     return getJson<ApiEventDogRow[]>(`/event_dogs/${eventId}`);
 }
 
+export function registerDogForEvent(
+    eventId: number,
+    dogId: number,
+    token: string
+) {
+    return requestWithAuth(`/events/${eventId}/dogs`, token, {
+        method: "POST",
+        body: JSON.stringify({ dogId }),
+    });
+}
+
+export function unregisterDogFromEvent(
+    eventId: number,
+    dogId: number,
+    token: string
+) {
+    return requestWithAuth(`/events/${eventId}/dogs/${dogId}`, token, {
+        method: "DELETE",
+    });
+}
+
 /* ===== участники + их собаки ===== */
 
 export interface ApiUserWithDogRow {
@@ -143,7 +206,28 @@ export interface ApiProgramDogRow {
 }
 
 export function getProgramDogs(programId: number): Promise<ApiProgramDogRow[]> {
-    return getJson<ApiProgramDogRow[]>(`"/program_dogs/${programId}"`.slice(1, -1));
+    return getJson<ApiProgramDogRow[]>(`/program_dogs/${programId}`);
+}
+
+export function registerDogForProgram(
+    programId: number,
+    dogId: number,
+    token: string
+) {
+    return requestWithAuth(`/programs/${programId}/dogs`, token, {
+        method: "POST",
+        body: JSON.stringify({ dogId }),
+    });
+}
+
+export function unregisterDogFromProgram(
+    programId: number,
+    dogId: number,
+    token: string
+) {
+    return requestWithAuth(`/programs/${programId}/dogs/${dogId}`, token, {
+        method: "DELETE",
+    });
 }
 
 /* ===== тренинги для людей ===== */
@@ -153,6 +237,33 @@ export type ApiPeopleTrainingRow = ApiEventRow;
 
 export function getPeopleTrainings(): Promise<ApiPeopleTrainingRow[]> {
     return getJson<ApiPeopleTrainingRow[]>("/people_events");
+}
+
+export function registerForTraining(
+    trainingId: number,
+    token: string,
+    memberId?: number
+) {
+    const payload =
+        typeof memberId === "number" ? { memberId } : {};
+    return requestWithAuth(`/programs/${trainingId}/members`, token, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
+}
+
+export function unregisterFromTraining(
+    trainingId: number,
+    token: string,
+    memberId?: number
+) {
+    const path =
+        typeof memberId === "number"
+            ? `/programs/${trainingId}/members/${memberId}`
+            : `/programs/${trainingId}/members`;
+    return requestWithAuth(path, token, {
+        method: "DELETE",
+    });
 }
 
 /* ===== участники события (владельцы) ===== */

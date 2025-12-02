@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { getUsers, type ApiUserWithDogRow } from "../api/client";
 import type { MemberWithDogs } from "../components/MemberCard";
 import { formatJoined } from "../components/MemberCard";
-import { groupUsers } from "./Members.tsx";
+import { groupUsers } from "../utils/members";
 import MemberAvatar from "../components/MemberAvatar";
 
 export default function MemberProfile() {

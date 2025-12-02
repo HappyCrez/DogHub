@@ -21,7 +21,7 @@ import {
 } from "../api/client";
 import { formatJoined } from "../components/MemberCard";
 import { programTypeLabel } from "./Training.tsx";
-import { groupUsers } from "./Members.tsx";
+import { groupUsers } from "../utils/members";
 import { useAuth } from "../auth/AuthContext";
 import {
     ProfileEditModal,
