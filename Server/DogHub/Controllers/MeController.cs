@@ -75,6 +75,8 @@ public class MeController : ControllerBase
                 return Forbid();
             }
 
+            var previousAvatarUrl = GetCurrentAvatarUrl(memberId.Value);
+
             if (avatar == null)
             {
                 return BadRequest(new { error = "Файл не найден в запросе." });
@@ -103,6 +105,8 @@ public class MeController : ControllerBase
             {
                 return StatusCode(500, new { error = "Не удалось сохранить ссылку на аватар." });
             }
+
+            TryDeleteOldAvatar(previousAvatarUrl, avatarUrl);
 
             return Ok(new { avatarUrl });
         }
@@ -235,6 +239,56 @@ public class MeController : ControllerBase
                 return null;
             default:
                 return element.GetRawText();
+        }
+    }
+
+    private string? GetCurrentAvatarUrl(int memberId)
+    {
+        var sql = "SELECT avatar_url FROM member WHERE id = @id;";
+        var parameters = new Dictionary<string, object?> { ["id"] = memberId };
+        var json = _db.ExecuteSQL(sql, parameters);
+
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            foreach (var element in doc.RootElement.EnumerateArray())
+            {
+                if (element.TryGetProperty("avatarUrl", out var avatarProp))
+                {
+                    return avatarProp.ValueKind == JsonValueKind.Null
+                        ? null
+                        : avatarProp.GetString();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GetCurrentAvatarUrl] {ex}");
+        }
+
+        return null;
+    }
+
+    private void TryDeleteOldAvatar(string? previousAvatarUrl, string newAvatarUrl)
+    {
+        if (string.IsNullOrWhiteSpace(previousAvatarUrl) ||
+            string.Equals(previousAvatarUrl, newAvatarUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        try
+        {
+            _avatarStorage.DeleteByUrl(previousAvatarUrl);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[UploadAvatar] Не удалось удалить старый аватар: {ex}");
         }
     }
 }
