@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using DogHub;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using BCryptNet = BCrypt.Net.BCrypt;
 
@@ -14,12 +15,22 @@ public class AuthController : ControllerBase
     private readonly DataBaseModel _db;
     private readonly SQLCommandManager _sql;
     private readonly TokenService _tokenService;
+    private readonly RefreshTokenService _refreshTokenService;
+    private readonly AppConfig _config;
+    private const string RefreshCookieName = "doghub_refresh_token";
 
-    public AuthController(DataBaseModel db, SQLCommandManager sql, TokenService tokenService)
+    public AuthController(
+        DataBaseModel db,
+        SQLCommandManager sql,
+        TokenService tokenService,
+        RefreshTokenService refreshTokenService,
+        AppConfig config)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _sql = sql ?? throw new ArgumentNullException(nameof(sql));
         _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
+        _refreshTokenService = refreshTokenService ?? throw new ArgumentNullException(nameof(refreshTokenService));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
     // POST /auth/register
@@ -108,25 +119,7 @@ public class AuthController : ControllerBase
             var userElement = userRoot[0];
 
             // Формируем обычный словарь без passwordHash
-            var userDict = new Dictionary<string, object?>();
-
-            foreach (var prop in userElement.EnumerateObject())
-            {
-                if (prop.NameEquals("passwordHash"))
-                    continue;
-
-                object? value = prop.Value.ValueKind switch
-                {
-                    JsonValueKind.String => prop.Value.GetString(),
-                    JsonValueKind.Number => prop.Value.TryGetInt64(out var l) ? l : prop.Value.GetDouble(),
-                    JsonValueKind.True   => true,
-                    JsonValueKind.False  => false,
-                    JsonValueKind.Null   => null,
-                    _ => prop.Value.GetRawText()
-                };
-
-                userDict[prop.Name] = value;
-            }
+            var userDict = BuildUserDictionary(userElement);
 
             return Ok(new { user = userDict });
         }
@@ -195,34 +188,29 @@ public class AuthController : ControllerBase
                 return Unauthorized(new { error = "Неверный email или пароль" });
             }
 
-            // Собрать user без passwordHash
-            var result = new Dictionary<string, object?>();
+            var userDict = BuildUserDictionary(userElement);
 
-            foreach (var prop in userElement.EnumerateObject())
+            if (!userElement.TryGetProperty("memberId", out var memberIdProp) ||
+                memberIdProp.ValueKind != JsonValueKind.Number)
             {
-                if (prop.NameEquals("passwordHash"))
-                    continue;
-
-                object? value = prop.Value.ValueKind switch
-                {
-                    JsonValueKind.String => prop.Value.GetString(),
-                    JsonValueKind.Number => prop.Value.TryGetInt64(out var l) ? l : prop.Value.GetDouble(),
-                    JsonValueKind.True   => true,
-                    JsonValueKind.False  => false,
-                    JsonValueKind.Null   => null,
-                    _ => prop.Value.GetRawText()
-                };
-
-                result[prop.Name] = value;
+                return StatusCode(500, new { error = "У пользователя отсутствует идентификатор" });
             }
 
+            var memberId = memberIdProp.GetInt32();
             var (accessToken, expiresAt) = _tokenService.GenerateAccessToken(userElement);
+            var (refreshToken, refreshExpiresAt) = _refreshTokenService.IssueToken(
+                memberId,
+                GetUserAgent(),
+                GetRemoteIp());
+
+            WriteRefreshCookie(refreshToken, refreshExpiresAt);
 
             return Ok(new
             {
                 accessToken,
                 accessTokenExpiresAt = expiresAt,
-                user = result
+                refreshTokenExpiresAt = refreshExpiresAt,
+                user = userDict
             });
         }
         catch (Exception ex)
@@ -230,5 +218,197 @@ public class AuthController : ControllerBase
             Console.WriteLine($"[Login] {ex}");
             return StatusCode(500, new { error = "Ошибка при входе" });
         }
+    }
+
+    // POST /auth/refresh
+    [HttpPost("refresh")]
+    public IActionResult Refresh()
+    {
+        try
+        {
+            if (!Request.Cookies.TryGetValue(RefreshCookieName, out var rawToken) ||
+                string.IsNullOrWhiteSpace(rawToken))
+            {
+                return Unauthorized(new { error = "Refresh-токен отсутствует" });
+            }
+
+            var tokenRecord = _refreshTokenService.GetActiveToken(rawToken);
+            if (tokenRecord == null)
+            {
+                ClearRefreshCookie();
+                return Unauthorized(new { error = "Сессия истекла. Войдите заново." });
+            }
+
+            var userAgent = GetUserAgent();
+            if (!string.IsNullOrEmpty(tokenRecord.UserAgent) &&
+                !string.IsNullOrEmpty(userAgent) &&
+                !string.Equals(tokenRecord.UserAgent, userAgent, StringComparison.Ordinal))
+            {
+                _refreshTokenService.RevokeToken(tokenRecord.Id);
+                ClearRefreshCookie();
+                return Unauthorized(new { error = "Обнаружено изменение устройства. Требуется повторный вход." });
+            }
+
+            var sql = _sql.GetCommand("get_member_by_id");
+            var parameters = new Dictionary<string, object?>
+            {
+                ["member_id"] = tokenRecord.MemberId
+            };
+
+            var json = _db.ExecuteSQL(sql, parameters);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                _refreshTokenService.RevokeToken(tokenRecord.Id);
+                ClearRefreshCookie();
+                return Unauthorized(new { error = "Пользователь не найден" });
+            }
+
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() == 0)
+            {
+                _refreshTokenService.RevokeToken(tokenRecord.Id);
+                ClearRefreshCookie();
+                return Unauthorized(new { error = "Пользователь не найден" });
+            }
+
+            var userElement = root[0];
+            var userDict = BuildUserDictionary(userElement);
+
+            var (accessToken, accessExpiresAt) = _tokenService.GenerateAccessToken(userElement);
+            var (newRefreshToken, newRefreshExpiresAt) = _refreshTokenService.IssueToken(
+                tokenRecord.MemberId,
+                userAgent,
+                GetRemoteIp());
+
+            _refreshTokenService.RevokeToken(tokenRecord.Id);
+            WriteRefreshCookie(newRefreshToken, newRefreshExpiresAt);
+
+            return Ok(new
+            {
+                accessToken,
+                accessTokenExpiresAt = accessExpiresAt,
+                refreshTokenExpiresAt = newRefreshExpiresAt,
+                user = userDict
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Refresh] {ex}");
+            return StatusCode(500, new { error = "Ошибка при обновлении сессии" });
+        }
+    }
+
+    // POST /auth/logout
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        try
+        {
+            if (Request.Cookies.TryGetValue(RefreshCookieName, out var rawToken) &&
+                !string.IsNullOrWhiteSpace(rawToken))
+            {
+                var tokenRecord = _refreshTokenService.GetActiveToken(rawToken);
+                if (tokenRecord != null)
+                {
+                    _refreshTokenService.RevokeToken(tokenRecord.Id);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Logout] {ex}");
+        }
+        finally
+        {
+            ClearRefreshCookie();
+        }
+
+        return NoContent();
+    }
+
+    private static Dictionary<string, object?> BuildUserDictionary(JsonElement userElement)
+    {
+        var result = new Dictionary<string, object?>();
+
+        foreach (var prop in userElement.EnumerateObject())
+        {
+            if (prop.NameEquals("passwordHash"))
+                continue;
+
+            result[prop.Name] = ConvertJsonValue(prop.Value);
+        }
+
+        return result;
+    }
+
+    private static object? ConvertJsonValue(JsonElement value)
+    {
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Number => value.TryGetInt64(out var l) ? l : value.GetDouble(),
+            JsonValueKind.True   => true,
+            JsonValueKind.False  => false,
+            JsonValueKind.Null   => null,
+            _ => value.GetRawText()
+        };
+    }
+
+    private void WriteRefreshCookie(string refreshToken, DateTime expiresAt)
+    {
+        var options = CreateRefreshCookieOptions(expiresAt);
+        Response.Cookies.Append(RefreshCookieName, refreshToken, options);
+    }
+
+    private void ClearRefreshCookie()
+    {
+        var options = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = _config.RefreshCookieSecure,
+            SameSite = SameSiteMode.Lax,
+            Path = "/"
+        };
+
+        if (!string.IsNullOrWhiteSpace(_config.RefreshCookieDomain))
+        {
+            options.Domain = _config.RefreshCookieDomain;
+        }
+
+        Response.Cookies.Delete(RefreshCookieName, options);
+    }
+
+    private CookieOptions CreateRefreshCookieOptions(DateTime expiresAt)
+    {
+        var utcExpires = DateTime.SpecifyKind(expiresAt, DateTimeKind.Utc);
+        var options = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = _config.RefreshCookieSecure,
+            SameSite = SameSiteMode.Lax,
+            Path = "/",
+            Expires = new DateTimeOffset(utcExpires)
+        };
+
+        if (!string.IsNullOrWhiteSpace(_config.RefreshCookieDomain))
+        {
+            options.Domain = _config.RefreshCookieDomain;
+        }
+
+        return options;
+    }
+
+    private string? GetUserAgent()
+    {
+        if (Request.Headers.TryGetValue("User-Agent", out var values))
+            return values.ToString();
+
+        return null;
+    }
+
+    private string? GetRemoteIp()
+    {
+        return HttpContext?.Connection?.RemoteIpAddress?.ToString();
     }
 }

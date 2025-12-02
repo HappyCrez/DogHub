@@ -2,20 +2,10 @@ import { useState } from "react";
 import type { FormEvent, ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { API_BASE_URL } from "../api/client";
-import { useAuth, type AuthUser } from "../auth/AuthContext";
+import { useAuth } from "../auth/AuthContext";
+import { loginRequest, registerRequest } from "../api/auth";
 
 type Mode = "login" | "register";
-
-interface LoginSuccessResponse {
-    accessToken: string;
-    accessTokenExpiresAt: string;
-    user: AuthUser;
-}
-
-interface RegisterSuccessResponse {
-    user: AuthUser;
-}
 
 async function hashPassword(password: string): Promise<string> {
     const encoder = new TextEncoder();
@@ -23,34 +13,6 @@ async function hashPassword(password: string): Promise<string> {
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function postJson<T>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${API_BASE_URL}${path}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-        },
-        body: JSON.stringify(body),
-    });
-
-    let data: any = null;
-    try {
-        data = await res.json();
-    } catch {
-        // если сервер вернул не-JSON, оставим data = null
-    }
-
-    if (!res.ok) {
-        const message =
-            data && typeof data.error === "string"
-                ? data.error
-                : "Ошибка при обращении к серверу авторизации";
-        throw new Error(message);
-    }
-
-    return data as T;
 }
 
 export const CITY_OPTIONS = [
@@ -270,10 +232,7 @@ export default function Auth() {
                     passwordHash,
                 };
 
-                const data = await postJson<RegisterSuccessResponse>(
-                    "/auth/register",
-                    payload
-                );
+                const data = await registerRequest(payload);
 
                 console.log("Успешная регистрация, user:", data.user);
 
@@ -293,10 +252,7 @@ export default function Auth() {
                     passwordHash,
                 };
 
-                const data = await postJson<LoginSuccessResponse>(
-                    "/auth/login",
-                    payload
-                );
+                const data = await loginRequest(payload);
 
                 console.log("Успешный вход, ответ:", data);
 
@@ -304,7 +260,7 @@ export default function Auth() {
                 login({
                     user: data.user,
                     token: data.accessToken,
-                    expiresAt: data.accessTokenExpiresAt,
+                    accessTokenExpiresAt: data.accessTokenExpiresAt,
                 });
 
                 // Перенаправляем в личный кабинет

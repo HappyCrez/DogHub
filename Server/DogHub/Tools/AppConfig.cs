@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using DotNetEnv;
 
@@ -52,11 +53,19 @@ public class AppConfig
     private readonly string jwtAudience;
     private readonly string jwtSecret;
     private readonly int accessTokenLifetimeMinutes;
+    private readonly int refreshTokenLifetimeDays;
+    private readonly string refreshCookieDomain;
+    private readonly bool refreshCookieSecure;
+    private readonly string[] corsAllowedOrigins;
 
     public string JwtIssuer => jwtIssuer;
     public string JwtAudience => jwtAudience;
     public string JwtSecret => jwtSecret;
     public TimeSpan AccessTokenLifetime => TimeSpan.FromMinutes(accessTokenLifetimeMinutes);
+    public TimeSpan RefreshTokenLifetime => TimeSpan.FromDays(refreshTokenLifetimeDays);
+    public string RefreshCookieDomain => refreshCookieDomain;
+    public bool RefreshCookieSecure => refreshCookieSecure;
+    public IReadOnlyList<string> CorsAllowedOrigins => corsAllowedOrigins;
 
     /// <summary>
     /// Читает поле в файле конфигурации, если поле не найдено выбрасывает исключение
@@ -114,7 +123,25 @@ public class AppConfig
         accessTokenLifetimeMinutes = int.TryParse(
             GetValueFromEnv("ACCESS_TOKEN_LIFETIME_MINUTES"),
             out var minutes)
-            ? minutes : 30; 
+            ? minutes : 30;
+
+        refreshTokenLifetimeDays = int.TryParse(
+            Environment.GetEnvironmentVariable("REFRESH_TOKEN_LIFETIME_DAYS"),
+            out var refreshDays)
+            ? refreshDays
+            : 14;
+
+        refreshCookieDomain = Environment.GetEnvironmentVariable("REFRESH_COOKIE_DOMAIN") ?? string.Empty;
+
+        var refreshCookieSecureEnv = Environment.GetEnvironmentVariable("REFRESH_COOKIE_SECURE");
+        refreshCookieSecure = refreshCookieSecureEnv != null &&
+            (refreshCookieSecureEnv.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+             refreshCookieSecureEnv.Equals("1", StringComparison.OrdinalIgnoreCase));
+
+        var corsOriginsEnv = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+        corsAllowedOrigins = string.IsNullOrWhiteSpace(corsOriginsEnv)
+            ? Array.Empty<string>()
+            : corsOriginsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     /// <summary>

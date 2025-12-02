@@ -497,6 +497,46 @@ ALTER SEQUENCE public.program_session_id_seq OWNED BY public.program_session.id;
 
 
 --
+-- Name: refresh_token; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.refresh_token (
+    id integer NOT NULL,
+    member_id integer NOT NULL,
+    token_hash text NOT NULL,
+    user_agent text,
+    ip_address character varying(64),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    expires_at timestamp without time zone NOT NULL,
+    revoked_at timestamp without time zone
+);
+
+
+ALTER TABLE public.refresh_token OWNER TO postgres;
+
+--
+-- Name: refresh_token_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.refresh_token_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.refresh_token_id_seq OWNER TO postgres;
+
+--
+-- Name: refresh_token_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.refresh_token_id_seq OWNED BY public.refresh_token.id;
+
+
+--
 -- Name: service_type; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -605,6 +645,13 @@ ALTER TABLE ONLY public.program_registration ALTER COLUMN id SET DEFAULT nextval
 --
 
 ALTER TABLE ONLY public.program_session ALTER COLUMN id SET DEFAULT nextval('public.program_session_id_seq'::regclass);
+
+
+--
+-- Name: refresh_token id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.refresh_token ALTER COLUMN id SET DEFAULT nextval('public.refresh_token_id_seq'::regclass);
 
 
 --
@@ -828,6 +875,14 @@ COPY public.program_registration (id, program_id, dog_id, registered_at) FROM st
 
 
 --
+-- Data for Name: refresh_token; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.refresh_token (id, member_id, token_hash, user_agent, ip_address, created_at, expires_at, revoked_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: program_session; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -945,6 +1000,13 @@ SELECT pg_catalog.setval('public.program_registration_id_seq', 22, true);
 --
 
 SELECT pg_catalog.setval('public.program_session_id_seq', 22, true);
+
+
+--
+-- Name: refresh_token_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.refresh_token_id_seq', 1, false);
 
 
 --
@@ -1083,6 +1145,22 @@ ALTER TABLE ONLY public.program_session
 
 
 --
+-- Name: refresh_token refresh_token_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.refresh_token
+    ADD CONSTRAINT refresh_token_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: refresh_token refresh_token_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.refresh_token
+    ADD CONSTRAINT refresh_token_token_hash_key UNIQUE (token_hash);
+
+
+--
 -- Name: service_type service_type_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1110,6 +1188,13 @@ CREATE UNIQUE INDEX event_registration_event_id_dog_id_member_id_idx ON public.e
 --
 
 CREATE UNIQUE INDEX program_registration_program_id_dog_id_idx ON public.program_registration USING btree (program_id, dog_id);
+
+
+--
+-- Name: refresh_token_member_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX refresh_token_member_id_idx ON public.refresh_token USING btree (member_id);
 
 
 --
@@ -1198,6 +1283,14 @@ ALTER TABLE ONLY public.program_registration
 
 ALTER TABLE ONLY public.program_registration
     ADD CONSTRAINT program_registration_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.program(id);
+
+
+--
+-- Name: refresh_token refresh_token_member_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.refresh_token
+    ADD CONSTRAINT refresh_token_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.member(id) ON DELETE CASCADE;
 
 
 --

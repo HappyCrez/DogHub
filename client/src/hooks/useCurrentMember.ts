@@ -67,7 +67,7 @@ export interface UseCurrentMemberResult {
 }
 
 export function useCurrentMember(): UseCurrentMemberResult {
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, isReady } = useAuth();
     const [member, setMember] = useState<MemberWithDogs | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -76,6 +76,11 @@ export function useCurrentMember(): UseCurrentMemberResult {
     const memberId = useMemo(() => extractMemberId(user), [user]);
 
     useEffect(() => {
+        if (!isReady) {
+            setLoading(true);
+            return;
+        }
+
         if (!isAuthenticated || memberId == null) {
             setMember(null);
             setError(null);
@@ -126,7 +131,7 @@ export function useCurrentMember(): UseCurrentMemberResult {
         return () => {
             cancelled = true;
         };
-    }, [memberId, isAuthenticated, reloadToken]);
+    }, [memberId, isAuthenticated, reloadToken, isReady]);
 
     const refresh = useCallback(() => {
         if (memberId == null) return;
