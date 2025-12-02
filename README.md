@@ -32,7 +32,7 @@
 
 ### Сборка сервера:
 ``` bash
-psql -U postgres -c "DROP DATABASE doghub_db" ||
+psql -U postgres -c "DROP DATABASE doghub_db"
 psql -U postgres -c "CREATE DATABASE doghub_db" &&
 psql -U postgres -d doghub_db -f "Assets/SQL/doghub_db.sql" &&
 psql -U postgres -d doghub_db -f "Assets/SQL/test_data.sql" &&
@@ -54,7 +54,7 @@ dotnet run --project Server/Doghub
 ```bash
 cd client
 npm install        # установка зависимостей (один раз)
-npm run dev        # запуск dev‑сервера Vite (по умолчанию http://localhost:5173)
+npm run dev        # запуск dev‑сервера Vite (по умолчанию http:/localhost:5173)
 ```
 
 ### Продакшн‑сборка
