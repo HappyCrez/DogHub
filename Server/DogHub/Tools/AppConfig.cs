@@ -21,6 +21,7 @@ public class AppConfig
     // Состояние программы
     public readonly LogLevels LogLevel;
     public readonly string PathToFonts;
+    public readonly string ImageHost;
 
     // Параметры базы данных
     public readonly string DbHost;
@@ -71,6 +72,8 @@ public class AppConfig
         Env.Load(envPath);
 
         LogLevel = (LogLevels)int.Parse(GetValueFromEnv("LOG_LEVEL"));
+        PathToFonts = GetValueFromEnv("PATH_TO_FONTS");
+        ImageHost = GetValueFromEnv("IMAGE_HOST");
 
         DbHost = GetValueFromEnv("DB_HOST");
         DbPort = GetValueFromEnv("DB_PORT");
@@ -103,9 +106,7 @@ public class AppConfig
         accessTokenLifetimeMinutes = int.TryParse(
             GetValueFromEnv("ACCESS_TOKEN_LIFETIME_MINUTES"),
             out var minutes)
-            ? minutes : 30;
-
-        PathToFonts = GetValueFromEnv("PATH_TO_FONTS"); 
+            ? minutes : 30; 
     }
 
     /// <summary>

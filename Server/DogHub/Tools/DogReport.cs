@@ -16,6 +16,8 @@ using System.Text.Json.Serialization;
 using System.Net.Http;
 using System.Net;
 
+using DogHub;
+
 public class DogReport
 {
     // Класс модели для десериализации JSON
@@ -192,18 +194,18 @@ public class DogReport
         document.Add(headerContainer);
     }
 
-    private Div GetDogPhotoElement(string? photoUrl)
+    private Div GetDogPhotoElement(string? filename)
     {
         var photoContainer = new Div()
             .SetWidth(200)
             .SetHeight(200)
             .SetHorizontalAlignment(HorizontalAlignment.CENTER);
         
-        if (!string.IsNullOrEmpty(photoUrl))
+        if (!string.IsNullOrEmpty(filename))
         {
             try
             {
-                var image = LoadImageFromUrl(photoUrl);
+                var image = LoadImageFromUrl(filename);
                 if (image != null)
                 {
                     // Настраиваем размер фото с сохранением пропорций
@@ -535,11 +537,13 @@ public class DogReport
         }
     }
 
-    private Image? LoadImageFromUrl(string imageUrl)
+    private Image? LoadImageFromUrl(string filename)
     {
         try
         {
-            using var response = httpClient.GetAsync(imageUrl).Result;
+            string pathToFile = $"{AppConfig.Instance().ImageHost}/Dogs/{filename.Trim()}";
+            using var response = httpClient.GetAsync(pathToFile).Result;
+            Console.WriteLine(pathToFile);
             if (response.IsSuccessStatusCode)
             {
                 using var stream = response.Content.ReadAsStreamAsync().Result;

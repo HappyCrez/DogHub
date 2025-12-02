@@ -34,8 +34,7 @@
 ``` bash
 psql -U postgres -c "DROP DATABASE doghub_db"
 psql -U postgres -c "CREATE DATABASE doghub_db" &&
-psql -U postgres -d doghub_db -f "Assets/SQL/doghub_db.sql" &&
-psql -U postgres -d doghub_db -f "Assets/SQL/test_data.sql" &&
+psql -U postgres -d doghub_db -f "Assets/SQL/doghub_db.sql"
 
 dotnet build &&
 dotnet test  &&

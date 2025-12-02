@@ -24,12 +24,12 @@ public class FontManager
     
     public PdfFont CreateFont()
     {
-        return LoadFont($"{AppConfig.Instance().PathToFonts}OpenSans-Regular.ttf");
+        return LoadFont($"{AppConfig.Instance().PathToFonts}/OpenSans-Regular.ttf");
     }
 
     public PdfFont CreateBoldFont()
     {
-        return LoadFont($"{AppConfig.Instance().PathToFonts}OpenSans-Bold.ttf");
+        return LoadFont($"{AppConfig.Instance().PathToFonts}/OpenSans-Bold.ttf");
     }
 
     public static FontManager Instance()
