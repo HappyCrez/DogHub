@@ -43,7 +43,11 @@ export default function MemberProfile() {
     const member: MemberWithDogs | undefined = useMemo(() => {
         if (!Number.isFinite(memberId)) return undefined;
         const grouped = groupUsers(rows);
-        return grouped.find((m) => m.id === memberId);
+        return grouped.find(
+            (m) =>
+                m.id === memberId &&
+                (m.role ?? "Пользователь") === "Пользователь"
+        );
     }, [rows, memberId]);
 
     if (!id || Number.isNaN(memberId)) {

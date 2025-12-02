@@ -128,17 +128,11 @@ export default function Account() {
     // Ищем участника с таким id в сгруппированном списке
     const currentMember = useMemo(() => {
         if (members.length === 0) return null;
-
         if (currentMemberId == null) {
-            // Фоллбэк: если по какой-то причине id не нашли,
-            // оставляем старое поведение — первый участник
-            return members[0];
+            return null;
         }
 
-        return (
-            members.find((m) => m.id === currentMemberId) ??
-            members[0]
-        );
+        return members.find((m) => m.id === currentMemberId) ?? null;
     }, [members, currentMemberId]);
 
     // Загружаем "мою активность", когда знаем текущего пользователя

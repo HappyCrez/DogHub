@@ -24,6 +24,7 @@ export interface MemberWithDogs {
     email?: string | null;
     joinDate?: string | null;
     membershipEndDate?: string | null;
+    role?: string | null;
     dogs: MemberDog[];
 }
 
