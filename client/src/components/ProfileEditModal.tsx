@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { API_BASE_URL, uploadAvatar } from "../api/client";
 import type { MemberWithDogs } from "./MemberCard";
 import { CITY_OPTIONS } from "../pages/Auth";
+import { useAuth } from "../auth/AuthContext";
 
 export interface ProfileEditPayload {
     fullName: string;
@@ -59,6 +60,7 @@ export function ProfileEditModal({
                                      onClose,
                                      onSaved,
                                  }: ProfileEditModalProps) {
+    const { updateUser } = useAuth();
     const [fullName, setFullName] = useState(member.fullName ?? "");
     const [phone, setPhone] = useState(() => normalizeInitialPhone(member.phone));
     const [email, setEmail] = useState(member.email ?? "");
@@ -288,6 +290,8 @@ export function ProfileEditModal({
                 throw new Error(msg);
             }
 
+            const nextAvatarUrl = uploadedAvatarUrl ?? member.avatar ?? null;
+
             // Обновляем локальное состояние в ЛК
             onSaved({
                 fullName: fullName.trim(),
@@ -295,7 +299,13 @@ export function ProfileEditModal({
                 email: email.trim() || null,
                 city: cityInput.trim() || null,
                 bio: bio.trim() || null,
-                avatarUrl: uploadedAvatarUrl ?? member.avatar ?? null,
+                avatarUrl: nextAvatarUrl,
+            });
+
+            updateUser({
+                fullName: fullName.trim(),
+                avatarUrl: nextAvatarUrl,
+                avatar: nextAvatarUrl,
             });
 
             onClose();
