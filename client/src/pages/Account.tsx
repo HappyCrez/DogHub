@@ -18,6 +18,7 @@ import {
     type ApiEventRow,
     type ApiPeopleTrainingRow,
     type ApiProgramRow,
+    type ApiCreatedDog,
 } from "../api/client";
 import { formatJoined } from "../components/MemberCard";
 import { programTypeLabel } from "./Training.tsx";
@@ -27,6 +28,7 @@ import {
     ProfileEditModal,
     type ProfileEditPayload,
 } from "../components/ProfileEditModal";
+import { DogCreateModal } from "../components/DogCreateModal";
 
 function formatEventDate(iso: string) {
     const d = new Date(iso);
@@ -69,6 +71,7 @@ export default function Account() {
 
     // Модалка редактирования профиля
     const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isDogModalOpen, setIsDogModalOpen] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -357,6 +360,55 @@ export default function Account() {
         );
     }
 
+    function handleDogCreated(newDog: ApiCreatedDog) {
+        setRows((prev) => {
+            let templateRow =
+                prev.find((row) => row.memberId === newDog.memberId) ??
+                (currentMember
+                    ? {
+                        memberId: currentMember.id,
+                        fullName: currentMember.fullName,
+                        phone: currentMember.phone ?? null,
+                        email: currentMember.email ?? null,
+                        city: currentMember.city ?? null,
+                        avatarUrl: currentMember.avatar ?? null,
+                        ownerBio: currentMember.bio ?? null,
+                        joinDate: currentMember.joinDate ?? null,
+                        membershipEndDate: currentMember.membershipEndDate ?? null,
+                        role: currentMember.role ?? "Пользователь",
+                        dogId: null,
+                        dogName: null,
+                        breed: null,
+                        sex: null,
+                        birthDate: null,
+                        chipNumber: null,
+                        dogPhoto: null,
+                        dogTags: null,
+                        dogBio: null,
+                    }
+                    : null);
+
+            if (!templateRow) {
+                return prev;
+            }
+
+            const newRow: ApiUserWithDogRow = {
+                ...templateRow,
+                dogId: newDog.id,
+                dogName: newDog.name,
+                breed: newDog.breed ?? null,
+                sex: newDog.sex ?? null,
+                birthDate: newDog.birthDate ?? null,
+                chipNumber: newDog.chipNumber ?? null,
+                dogPhoto: newDog.photo ?? null,
+                dogTags: newDog.tags ?? null,
+                dogBio: newDog.bio ?? null,
+            };
+
+            return [...prev, newRow];
+        });
+    }
+
     return (
         <section className="mx-auto flex max-w-5xl flex-1 flex-col px-4 py-8 md:py-10">
             <header className="mb-4 md:mb-6">
@@ -468,6 +520,7 @@ export default function Account() {
                     </button>
                     <button
                         type="button"
+                        onClick={() => setIsDogModalOpen(true)}
                         className="inline-flex items-center justify-center rounded-xl bg-white/80 px-3.5 py-2 font-medium text-gray-900 shadow-sm transition hover:bg-white"
                     >
                         🐶 Добавить собаку
@@ -819,6 +872,13 @@ export default function Account() {
                     member={currentMember}
                     onClose={() => setIsEditOpen(false)}
                     onSaved={(payload) => handleProfileSaved(currentMember.id, payload)}
+                />
+            )}
+            {currentMember && (
+                <DogCreateModal
+                    open={isDogModalOpen}
+                    onClose={() => setIsDogModalOpen(false)}
+                    onCreated={handleDogCreated}
                 />
             )}
         </section>

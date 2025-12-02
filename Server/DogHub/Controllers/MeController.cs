@@ -3,6 +3,8 @@ using System.Text.Json;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Linq;
+using System.Text.Json.Serialization;
 using DogHub;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,11 +19,13 @@ public class MeController : ControllerBase
 {
     private readonly DataBaseModel _db;
     private readonly AvatarStorage _avatarStorage;
+    private readonly DogPhotoStorage _dogPhotoStorage;
 
-    public MeController(DataBaseModel db, AvatarStorage avatarStorage)
+    public MeController(DataBaseModel db, AvatarStorage avatarStorage, DogPhotoStorage dogPhotoStorage)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _avatarStorage = avatarStorage ?? throw new ArgumentNullException(nameof(avatarStorage));
+        _dogPhotoStorage = dogPhotoStorage ?? throw new ArgumentNullException(nameof(dogPhotoStorage));
     }
 
     // GET /me — получить свои данные по токену
@@ -130,6 +134,155 @@ public class MeController : ControllerBase
         }
 
         return memberId;
+    }
+
+    [HttpPost("dogs/photo")]
+    [Consumes("multipart/form-data")]
+    public IActionResult UploadDogPhoto([FromForm] IFormFile? photo)
+    {
+        try
+        {
+            var memberId = GetMemberId();
+            if (memberId == null)
+            {
+                return Forbid();
+            }
+
+            if (photo == null)
+            {
+                return BadRequest(new { error = "Файл не найден в запросе." });
+            }
+
+            string photoUrl;
+            try
+            {
+                photoUrl = _dogPhotoStorage.Upload(memberId.Value, photo);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+
+            return Ok(new { photoUrl });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[UploadDogPhoto] {ex}");
+            return StatusCode(500, new { error = "Ошибка при загрузке фотографии собаки." });
+        }
+    }
+
+    [HttpPost("dogs")]
+    public IActionResult CreateDog([FromBody] CreateDogRequest request)
+    {
+        try
+        {
+            var memberId = GetMemberId();
+            if (memberId == null)
+            {
+                return Forbid();
+            }
+
+            if (request == null)
+            {
+                return BadRequest(new { error = "Тело запроса не может быть пустым." });
+            }
+
+            var name = request.Name?.Trim();
+            var breed = request.Breed?.Trim();
+            var sex = request.Sex?.Trim().ToUpperInvariant();
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return BadRequest(new { error = "Поле name обязательно." });
+            }
+
+            if (string.IsNullOrWhiteSpace(breed))
+            {
+                return BadRequest(new { error = "Поле breed обязательно." });
+            }
+
+            if (sex is not ("M" or "F"))
+            {
+                return BadRequest(new { error = "Поле sex должно быть 'M' или 'F'." });
+            }
+
+            DateTime? birthDate = null;
+            if (!string.IsNullOrWhiteSpace(request.BirthDate))
+            {
+                if (DateTime.TryParse(request.BirthDate, out var parsedBirth))
+                {
+                    birthDate = parsedBirth.Date;
+                }
+                else
+                {
+                    return BadRequest(new { error = "Поле birthDate имеет неверный формат." });
+                }
+            }
+
+            var chipNumber = string.IsNullOrWhiteSpace(request.ChipNumber)
+                ? null
+                : request.ChipNumber.Trim();
+
+            var bio = string.IsNullOrWhiteSpace(request.Bio)
+                ? null
+                : request.Bio.Trim();
+
+            var photoUrl = string.IsNullOrWhiteSpace(request.Photo)
+                ? null
+                : request.Photo.Trim();
+
+            string[]? tags = request.Tags?
+                .Select(tag => tag?.Trim())
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Select(tag => tag!)
+                .ToArray();
+
+            if (tags is { Length: 0 })
+            {
+                tags = null;
+            }
+
+            var parameters = new Dictionary<string, object?>
+            {
+                ["member_id"] = memberId.Value,
+                ["name"] = name,
+                ["breed"] = breed,
+                ["sex"] = sex,
+                ["birth_date"] = birthDate,
+                ["chip_number"] = chipNumber,
+                ["photo"] = photoUrl,
+                ["bio"] = bio,
+                ["tags"] = tags
+            };
+
+            const string sql = @"
+INSERT INTO dog (member_id, name, breed, sex, birth_date, chip_number, photo, bio, tags)
+VALUES (@member_id, @name, @breed, CAST(@sex AS sex_enum), @birth_date, @chip_number, @photo, @bio, @tags)
+RETURNING id, member_id, name, breed, sex, birth_date, chip_number, photo, bio, tags;";
+
+            var json = _db.ExecuteSQL(sql, parameters);
+
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return StatusCode(500, new { error = "Не удалось создать собаку." });
+            }
+
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() == 0)
+            {
+                return StatusCode(500, new { error = "Создание собаки прошло успешно, но данные не найдены." });
+            }
+
+            var firstDog = root[0];
+            return Content(firstDog.GetRawText(), "application/json");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CreateDog] {ex}");
+            return StatusCode(500, new { error = "Ошибка при создании собаки." });
+        }
     }
 
     // PUT /me — обновить свои данные:
@@ -290,5 +443,32 @@ public class MeController : ControllerBase
         {
             Console.WriteLine($"[UploadAvatar] Не удалось удалить старый аватар: {ex}");
         }
+    }
+
+    public class CreateDogRequest
+    {
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("breed")]
+        public string? Breed { get; set; }
+
+        [JsonPropertyName("sex")]
+        public string? Sex { get; set; }
+
+        [JsonPropertyName("birthDate")]
+        public string? BirthDate { get; set; }
+
+        [JsonPropertyName("chipNumber")]
+        public string? ChipNumber { get; set; }
+
+        [JsonPropertyName("photo")]
+        public string? Photo { get; set; }
+
+        [JsonPropertyName("bio")]
+        public string? Bio { get; set; }
+
+        [JsonPropertyName("tags")]
+        public string[]? Tags { get; set; }
     }
 }

@@ -35,7 +35,7 @@ public class DataBaseModel
             using var command = new NpgsqlCommand(sql, connection);
             AddParameters(command, parameters);
 
-            if (sql.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+            if (ShouldExecuteAsQuery(sql))
                 return ExecuteQuery(command);
             else
                 return ExecuteNonQuery(command);
@@ -60,7 +60,7 @@ public class DataBaseModel
             using var command = new NpgsqlCommand(sql, connection);
             AddParameters(command, parameters);
 
-            string json = sql.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)
+            string json = ShouldExecuteAsQuery(sql)
                 ? ExecuteQuery(command)
                 : ExecuteNonQuery(command);
 
@@ -87,6 +87,22 @@ public class DataBaseModel
 
         foreach (var kv in parameters)
             command.Parameters.AddWithValue(kv.Key, kv.Value ?? DBNull.Value);
+    }
+
+    private static bool ShouldExecuteAsQuery(string sql)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+        {
+            return false;
+        }
+
+        var trimmed = sql.TrimStart();
+        if (trimmed.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return trimmed.Contains("RETURNING", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
