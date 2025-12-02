@@ -26,6 +26,7 @@ interface AuthContextValue {
     isAuthenticated: boolean;
     login: (payload: LoginPayload) => void;
     logout: () => void;
+    updateUser: (updates: Partial<AuthUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -79,12 +80,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const updateUser = (updates: Partial<AuthUser>) => {
+        if (!updates || typeof updates !== "object") return;
+
+        setUser((prev) => {
+            if (!prev) return prev;
+            const next = { ...prev, ...updates };
+            try {
+                localStorage.setItem(AUTH_USER_KEY, JSON.stringify(next));
+            } catch (e) {
+                console.error("Не удалось обновить данные пользователя в localStorage:", e);
+            }
+            return next;
+        });
+    };
+
     const value: AuthContextValue = {
         user,
         token,
         isAuthenticated: !!user && !!token,
         login,
         logout,
+        updateUser,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
