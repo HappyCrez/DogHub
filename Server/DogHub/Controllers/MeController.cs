@@ -11,7 +11,7 @@ namespace DogHub.Controllers;
 
 [ApiController]
 [Route("me")]
-[Authorize] // любой залогиненный: Пользователь / Тренер / Админ
+[Authorize] // любой залогиненный: Пользователь / Тренер / Администратор
 public class MeController : ControllerBase
 {
     private readonly DataBaseModel _db;

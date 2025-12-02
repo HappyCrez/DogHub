@@ -76,7 +76,7 @@ public class ProgramsController : ControllerBase
 
     // Создание новой программы
     [HttpPost]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult CreateProgram([FromBody] JsonElement body)
     {
         try
@@ -114,7 +114,7 @@ public class ProgramsController : ControllerBase
 
     // Обновление программы
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult UpdateProgram(int id, [FromBody] JsonElement body)
     {
         try
@@ -156,7 +156,7 @@ public class ProgramsController : ControllerBase
 
     // Удаление программы
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult DeleteProgram(int id)
     {
         try
@@ -212,9 +212,9 @@ public class ProgramsController : ControllerBase
     {
         try
         {
-            var isAdmin = User.IsInRole("Админ");
+            var isAdmin = User.IsInRole("Администратор");
 
-            // Админ может записать любого пользователя, передав memberId в теле запроса.
+            // Администратор может записать любого пользователя, передав memberId в теле запроса.
             // Обычный пользователь записывает только себя.
             int? explicitMemberId = null;
             if (isAdmin &&
@@ -291,7 +291,7 @@ public class ProgramsController : ControllerBase
 
     // Удаление записи на тренинг
     // Обычный пользователь может снять только себя.
-    // Админ может снять любого, указав memberId в пути.
+    // Администратор может снять любого, указав memberId в пути.
     // DELETE /programs/{trainingId}/members/{memberId?}
     [HttpDelete("{trainingId:int}/members/{memberId:int?}")]
     [Authorize]
@@ -299,7 +299,7 @@ public class ProgramsController : ControllerBase
     {
         try
         {
-            var isAdmin = User.IsInRole("Админ");
+            var isAdmin = User.IsInRole("Администратор");
             var currentUserId = GetCurrentUserId();
 
             if (!isAdmin)
@@ -353,9 +353,9 @@ public class ProgramsController : ControllerBase
                 return BadRequest(new { error = "Нужно передать целочисленный dogId" });
             }
 
-            var isAdmin = User.IsInRole("Админ");
+            var isAdmin = User.IsInRole("Администратор");
 
-            // 1) если не админ — проверяем, что собака принадлежит текущему пользователю
+            // 1) если не Администратор — проверяем, что собака принадлежит текущему пользователю
             if (!isAdmin)
             {
                 var currentUserId = GetCurrentUserId();
@@ -448,7 +448,7 @@ public class ProgramsController : ControllerBase
     {
         try
         {
-            var isAdmin = User.IsInRole("Админ");
+            var isAdmin = User.IsInRole("Администратор");
 
             if (!isAdmin)
             {

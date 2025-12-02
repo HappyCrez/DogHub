@@ -40,7 +40,7 @@ public class MembersController : ControllerBase
 
     // Создание нового участника
     [HttpPost]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult CreateMember([FromBody] JsonElement body)
     {
         try
@@ -78,7 +78,7 @@ public class MembersController : ControllerBase
 
     // Обновление участника
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult UpdateMember(int id, [FromBody] JsonElement body)
     {
         try
@@ -120,7 +120,7 @@ public class MembersController : ControllerBase
 
     // Удаление участника
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult DeleteMember(int id)
     {
         try
@@ -170,9 +170,9 @@ public class MembersController : ControllerBase
         }
     }
 
-    // Смена роли участника (Пользователь / Тренер / Админ)
+    // Смена роли участника (Пользователь / Тренер / Администратор)
     [HttpPost("{id:int}/role")]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult ChangeMemberRole(int id, [FromBody] JsonElement body)
     {
         try

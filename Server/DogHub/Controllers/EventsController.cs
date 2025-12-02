@@ -97,7 +97,7 @@ public class EventsController : ControllerBase
 
     // POST /events
     [HttpPost]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult CreateEvent([FromBody] JsonElement body)
     {
         var columns = new List<string>();
@@ -124,7 +124,7 @@ public class EventsController : ControllerBase
 
     // PUT /events/{id}
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult UpdateEvent(int id, [FromBody] JsonElement body)
     {
         var updates = new List<string>();
@@ -152,7 +152,7 @@ public class EventsController : ControllerBase
 
     // DELETE /events/{id}
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult DeleteEvent(int id)
     {
         var parameters = new Dictionary<string, object?>
@@ -198,9 +198,9 @@ public class EventsController : ControllerBase
                 return BadRequest(new { error = "Нужно передать целочисленный dogId" });
             }
 
-            var isAdmin = User.IsInRole("Админ");
+            var isAdmin = User.IsInRole("Администратор");
 
-            // 1) Проверяем, что собака существует и принадлежит текущему пользователю (если не админ)
+            // 1) Проверяем, что собака существует и принадлежит текущему пользователю (если не Администратор)
             if (!isAdmin)
             {
                 var currentUserId = GetCurrentUserId();
@@ -278,7 +278,7 @@ public class EventsController : ControllerBase
     {
         try
         {
-            var isAdmin = User.IsInRole("Админ");
+            var isAdmin = User.IsInRole("Администратор");
 
             if (!isAdmin)
             {
