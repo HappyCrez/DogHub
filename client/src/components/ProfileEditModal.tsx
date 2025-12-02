@@ -1,11 +1,12 @@
 import {
     useEffect,
     useState,
+    useRef,
     type FormEvent,
     type ChangeEvent,
 } from "react";
 import { motion } from "framer-motion";
-import { API_BASE_URL } from "../api/client";
+import { API_BASE_URL, uploadAvatar } from "../api/client";
 import type { MemberWithDogs } from "./MemberCard";
 import { CITY_OPTIONS } from "../pages/Auth";
 
@@ -15,7 +16,11 @@ export interface ProfileEditPayload {
     email: string | null;
     city: string | null;
     bio: string | null;
+    avatarUrl?: string | null;
 }
+
+const ALLOWED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
 // Форматируем 10 цифр после +7 в вид +7-XXX-XXX-XX-XX
 function formatRussianPhone(restDigits: string): string {
@@ -63,6 +68,32 @@ export function ProfileEditModal({
     const [bio, setBio] = useState(member.bio ?? "");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(
+        member.avatar ?? null
+    );
+    const avatarInputRef = useRef<HTMLInputElement | null>(null);
+    const previewObjectUrlRef = useRef<string | null>(null);
+
+    function setAvatarPreviewSafe(value: string | null, isObjectUrl = false) {
+        if (previewObjectUrlRef.current) {
+            URL.revokeObjectURL(previewObjectUrlRef.current);
+            previewObjectUrlRef.current = null;
+        }
+        setAvatarPreview(value);
+        if (isObjectUrl && value) {
+            previewObjectUrlRef.current = value;
+        }
+    }
+
+    useEffect(() => {
+        return () => {
+            if (previewObjectUrlRef.current) {
+                URL.revokeObjectURL(previewObjectUrlRef.current);
+                previewObjectUrlRef.current = null;
+            }
+        };
+    }, []);
 
     // Подхватываем обновлённого участника при повторном открытии
     useEffect(() => {
@@ -75,6 +106,11 @@ export function ProfileEditModal({
         setShowCityDropdown(false);
         setBio(member.bio ?? "");
         setError(null);
+        setAvatarFile(null);
+        setAvatarPreviewSafe(member.avatar ?? null);
+        if (avatarInputRef.current) {
+            avatarInputRef.current.value = "";
+        }
     }, [open, member]);
 
     if (!open) return null;
@@ -107,6 +143,50 @@ export function ProfileEditModal({
 
         const formatted = formatRussianPhone(digits);
         setPhone(formatted || "+7");
+    }
+
+    function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+
+        if (!file) {
+            setAvatarFile(null);
+            setAvatarPreviewSafe(member.avatar ?? null);
+            if (avatarInputRef.current) {
+                avatarInputRef.current.value = "";
+            }
+            return;
+        }
+
+        if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+            setError("Поддерживаются только JPG, PNG или WEBP.");
+            e.target.value = "";
+            if (avatarInputRef.current) {
+                avatarInputRef.current.value = "";
+            }
+            return;
+        }
+
+        if (file.size > MAX_AVATAR_SIZE) {
+            setError("Размер файла не должен превышать 5 МБ.");
+            e.target.value = "";
+            if (avatarInputRef.current) {
+                avatarInputRef.current.value = "";
+            }
+            return;
+        }
+
+        setError(null);
+        setAvatarFile(file);
+        const previewUrl = URL.createObjectURL(file);
+        setAvatarPreviewSafe(previewUrl, true);
+    }
+
+    function handleAvatarReset() {
+        setAvatarFile(null);
+        setAvatarPreviewSafe(member.avatar ?? null);
+        if (avatarInputRef.current) {
+            avatarInputRef.current.value = "";
+        }
     }
 
     // === Подсказки городов ===
@@ -157,16 +237,26 @@ export function ProfileEditModal({
         const phoneForApi =
             phone && phone !== "+7" ? phone.trim() : null;
 
-        const payloadForApi = {
-            fullName: fullName.trim(),
-            phone: phoneForApi,
-            email: email.trim() || null,
-            city: cityInput.trim() || null,
-            ownerBio: bio.trim() || null,
-        };
-
         setSaving(true);
         try {
+            let uploadedAvatarUrl: string | null = null;
+
+            if (avatarFile) {
+                const result = await uploadAvatar(avatarFile, token);
+                uploadedAvatarUrl = result.avatarUrl;
+            }
+
+            const payloadForApi: Record<string, unknown> = {
+                fullName: fullName.trim(),
+                phone: phoneForApi,
+                email: email.trim() || null,
+                city: cityInput.trim() || null,
+                ownerBio: bio.trim() || null,
+            };
+            if (uploadedAvatarUrl) {
+                payloadForApi.avatarUrl = uploadedAvatarUrl;
+            }
+
             const res = await fetch(`${API_BASE_URL}/me`, {
                 method: "PUT",
                 headers: {
@@ -200,11 +290,12 @@ export function ProfileEditModal({
 
             // Обновляем локальное состояние в ЛК
             onSaved({
-                fullName: payloadForApi.fullName,
-                phone: payloadForApi.phone,
-                email: payloadForApi.email,
-                city: payloadForApi.city,
-                bio: (payloadForApi.ownerBio as string | null) ?? null,
+                fullName: fullName.trim(),
+                phone: phoneForApi,
+                email: email.trim() || null,
+                city: cityInput.trim() || null,
+                bio: bio.trim() || null,
+                avatarUrl: uploadedAvatarUrl ?? member.avatar ?? null,
             });
 
             onClose();
@@ -233,7 +324,7 @@ export function ProfileEditModal({
                     Настройки профиля
                 </h2>
                 <p className="mb-4 text-xs text-gray-500">
-                    Обновите свои данные. Фото пока будет с заглушкой — добавим позже.
+                    Обновите личные данные и загрузите актуальное фото профиля.
                 </p>
 
                 {error && (
@@ -329,9 +420,52 @@ export function ProfileEditModal({
                         />
                     </div>
 
-                    <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-xs text-gray-500">
-                        Фото профиля сейчас используется как заглушка. Позже здесь появится
-                        загрузка своей фотографии 🐾
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+                        <p className="text-xs font-medium text-gray-700">Фото профиля</p>
+                        <div className="mt-3 flex items-center gap-4">
+                            <div className="h-20 w-20 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                                {avatarPreview ? (
+                                    <img
+                                        src={avatarPreview}
+                                        alt="Предпросмотр аватара"
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-2xl">
+                                        🐾
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex flex-1 flex-col gap-2 text-xs text-gray-600">
+                                <label className="inline-flex w-fit cursor-pointer items-center justify-center rounded-xl bg-black px-3 py-1.5 font-semibold text-white shadow-sm transition hover:bg-black/90">
+                                    <input
+                                        ref={avatarInputRef}
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp"
+                                        className="hidden"
+                                        onChange={handleAvatarChange}
+                                    />
+                                    Выбрать файл
+                                </label>
+                                {avatarFile && (
+                                    <button
+                                        type="button"
+                                        onClick={handleAvatarReset}
+                                        className="w-fit rounded-xl border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-white"
+                                    >
+                                        Сбросить выбор
+                                    </button>
+                                )}
+                                <p className="text-[11px] text-gray-500">
+                                    Допустимы JPG, PNG или WEBP до 5 МБ.
+                                </p>
+                                {avatarFile && (
+                                    <p className="text-[11px] text-gray-600">
+                                        Загружено: {avatarFile.name}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     <div className="mt-3 flex justify-end gap-3">
