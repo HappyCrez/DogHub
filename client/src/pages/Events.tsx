@@ -1,7 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { getEvents, type ApiEventRow } from "../api/client";
+import {
+    getEvents,
+    type ApiEventRow,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+    type UpsertEventPayload,
+} from "../api/client";
 import EventCard from "../components/EventCard";
+import AdminEventForm from "../components/AdminEventForm";
+import { useAdminAccess } from "../hooks/useAdminAccess";
 
 export default function Events() {
     const [events, setEvents] = useState<ApiEventRow[]>([]);
@@ -9,6 +18,16 @@ export default function Events() {
     const [error, setError] = useState<string | null>(null);
     const [q, setQ] = useState("");
     const [category, setCategory] = useState<string>("all");
+    const { isAdmin, token } = useAdminAccess();
+    const [adminMode, setAdminMode] = useState<"create" | "edit">("create");
+    const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+    const [eventSubmitting, setEventSubmitting] = useState(false);
+    const [deleteBusyId, setDeleteBusyId] = useState<number | null>(null);
+    const [eventMessage, setEventMessage] = useState<{
+        type: "success" | "error";
+        text: string;
+    } | null>(null);
+    const [eventFormResetCounter, setEventFormResetCounter] = useState(0);
 
     useEffect(() => {
         let cancelled = false;
@@ -30,6 +49,15 @@ export default function Events() {
         return () => {
             cancelled = true;
         };
+    }, []);
+
+    const refreshEventsSilently = useCallback(async () => {
+        try {
+            const updated = await getEvents();
+            setEvents(updated);
+        } catch (err) {
+            console.error(err);
+        }
     }, []);
 
     const categories = useMemo(() => {
@@ -82,6 +110,122 @@ export default function Events() {
         [filtered, now]
     );
 
+    const adminEvents = useMemo(
+        () =>
+            [...events].sort(
+                (a, b) =>
+                    new Date(b.startAt).getTime() -
+                    new Date(a.startAt).getTime()
+            ),
+        [events]
+    );
+
+    const selectedEvent = useMemo(
+        () => adminEvents.find((ev) => ev.id === selectedEventId) ?? null,
+        [adminEvents, selectedEventId]
+    );
+
+    const adminFormInitialValues = useMemo(() => {
+        if (adminMode !== "edit" || !selectedEvent) return null;
+        return {
+            title: selectedEvent.title,
+            category: selectedEvent.category ?? "",
+            startAt: selectedEvent.startAt,
+            endAt: selectedEvent.endAt ?? "",
+            venue: selectedEvent.venue,
+            price:
+                typeof selectedEvent.price === "number"
+                    ? String(selectedEvent.price)
+                    : "",
+            description: selectedEvent.description ?? "",
+        };
+    }, [adminMode, selectedEvent]);
+
+    const adminFormResetKey = `${adminMode}-${selectedEventId ?? "none"}-${eventFormResetCounter}`;
+
+    const handleAdminEventSubmit = useCallback(
+        async (payload: UpsertEventPayload) => {
+            if (!token) {
+                setEventMessage({
+                    type: "error",
+                    text: "Авторизуйтесь заново, чтобы редактировать события.",
+                });
+                return;
+            }
+
+            setEventSubmitting(true);
+            setEventMessage(null);
+
+            try {
+                if (adminMode === "edit" && selectedEvent) {
+                    await updateEvent(selectedEvent.id, payload, token);
+                    setEventMessage({
+                        type: "success",
+                        text: "Событие обновлено.",
+                    });
+                } else {
+                    await createEvent(payload, token);
+                    setEventMessage({
+                        type: "success",
+                        text: "Новое событие добавлено.",
+                    });
+                    setEventFormResetCounter((v) => v + 1);
+                }
+                await refreshEventsSilently();
+                if (adminMode === "create") {
+                    setSelectedEventId(null);
+                }
+            } catch (err) {
+                console.error(err);
+                setEventMessage({
+                    type: "error",
+                    text:
+                        err instanceof Error
+                            ? err.message
+                            : "Не удалось сохранить событие.",
+                });
+            } finally {
+                setEventSubmitting(false);
+            }
+        },
+        [token, adminMode, selectedEvent, refreshEventsSilently]
+    );
+
+    const handleDeleteEvent = useCallback(
+        async (id: number) => {
+            if (!token) {
+                setEventMessage({
+                    type: "error",
+                    text: "Авторизуйтесь заново, чтобы управлять событиями.",
+                });
+                return;
+            }
+            setDeleteBusyId(id);
+            setEventMessage(null);
+            try {
+                await deleteEvent(id, token);
+                setEventMessage({
+                    type: "success",
+                    text: "Событие удалено.",
+                });
+                setSelectedEventId((prev) => (prev === id ? null : prev));
+                await refreshEventsSilently();
+            } catch (err) {
+                console.error(err);
+                setEventMessage({
+                    type: "error",
+                    text:
+                        err instanceof Error
+                            ? err.message
+                            : "Удаление недоступно. Возможно, есть зарегистрированные участники.",
+                });
+            } finally {
+                setDeleteBusyId(null);
+            }
+        },
+        [token, refreshEventsSilently]
+    );
+
     return (
         <section className="space-y-4">
             <header className="space-y-2">
@@ -91,6 +235,176 @@ export default function Events() {
                     митапы, фотосессии и другие активности клуба.
                 </p>
             </header>
+
+            {isAdmin && (
+                <section className="rounded-3xl bg-white/90 p-5 shadow-sm ring-1 ring-black/5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                Режим администратора
+                            </p>
+                            <h2 className="text-lg font-semibold text-gray-900">
+                                Управление событиями
+                            </h2>
+                        </div>
+                        <div className="rounded-2xl bg-gray-100 p-1 text-sm font-medium text-gray-700">
+                            <button
+                                type="button"
+                                onClick={() => setAdminMode("create")}
+                                className={`rounded-xl px-3 py-1.5 transition ${
+                                    adminMode === "create"
+                                        ? "bg-white shadow-sm"
+                                        : "text-gray-500 hover:text-gray-900"
+                                }`}
+                            >
+                                Новое событие
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setAdminMode("edit")}
+                                className={`rounded-xl px-3 py-1.5 transition ${
+                                    adminMode === "edit"
+                                        ? "bg-white shadow-sm"
+                                        : "text-gray-500 hover:text-gray-900"
+                                }`}
+                            >
+                                Редактирование
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                        <AdminEventForm
+                            heading={
+                                adminMode === "create"
+                                    ? "Новое событие"
+                                    : selectedEvent
+                                        ? `Редактирование: ${selectedEvent.title}`
+                                        : "Выберите событие справа"
+                            }
+                            subheading={
+                                adminMode === "create"
+                                    ? "Заполните поля, чтобы моментально добавить встречу в ленту."
+                                    : "Все изменения сохраняются сразу после нажатия кнопки."
+                            }
+                            submitLabel={
+                                adminMode === "create"
+                                    ? "Создать событие"
+                                    : "Сохранить изменения"
+                            }
+                            submitting={eventSubmitting}
+                            initialValues={adminFormInitialValues}
+                            resetKey={adminFormResetKey}
+                            onSubmit={handleAdminEventSubmit}
+                            actionSlot={
+                                adminMode === "edit" && selectedEvent ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDeleteEvent(selectedEvent.id)}
+                                        disabled={
+                                            deleteBusyId === selectedEvent.id ||
+                                            (selectedEvent.registeredCount ?? 0) > 0
+                                        }
+                                        className="inline-flex items-center justify-center rounded-2xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+                                    >
+                                        {deleteBusyId === selectedEvent.id
+                                            ? "Удаляем…"
+                                            : "Удалить"}
+                                    </button>
+                                ) : undefined
+                            }
+                        />
+
+                        <div className="space-y-3 rounded-3xl border border-dashed border-gray-200 p-4">
+                            <div className="flex items-center justify-between gap-2">
+                                <h3 className="text-sm font-semibold text-gray-900">
+                                    События клуба
+                                </h3>
+                                <span className="text-xs text-gray-500">
+                                    Всего: {events.length}
+                                </span>
+                            </div>
+                            <div className="max-h-[360px] space-y-3 overflow-auto pr-1">
+                                {adminEvents.map((ev) => (
+                                    <div
+                                        key={ev.id}
+                                        className={`rounded-2xl border px-3 py-2 text-sm shadow-sm transition ${
+                                            selectedEventId === ev.id
+                                                ? "border-black/40 bg-black/5"
+                                                : "border-gray-200 bg-white hover:border-black/20"
+                                        }`}
+                                    >
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <p className="font-semibold text-gray-900">
+                                                    {ev.title}
+                                                </p>
+                                                <p className="text-xs text-gray-500">
+                                                    {new Date(ev.startAt).toLocaleString("ru-RU", {
+                                                        day: "2-digit",
+                                                        month: "short",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })}
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {ev.registeredCount !== undefined && (
+                                                    <span
+                                                        className={`rounded-full px-2 py-0.5 text-[11px] ${
+                                                            ev.registeredCount > 0
+                                                                ? "bg-amber-100 text-amber-900"
+                                                                : "bg-emerald-100 text-emerald-800"
+                                                        }`}
+                                                    >
+                                                        {ev.registeredCount > 0
+                                                            ? `Записано: ${ev.registeredCount}`
+                                                            : "Пока без записей"}
+                                                    </span>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setAdminMode("edit");
+                                                        setSelectedEventId(ev.id);
+                                                    }}
+                                                    className="rounded-xl border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:border-black hover:text-black"
+                                                >
+                                                    Редактировать
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteEvent(ev.id)}
+                                                    disabled={
+                                                        (ev.registeredCount ?? 0) > 0 ||
+                                                        deleteBusyId === ev.id
+                                                    }
+                                                    className="rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+                                                >
+                                                    {deleteBusyId === ev.id
+                                                        ? "Удаляем…"
+                                                        : "Удалить"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {eventMessage && (
+                                <p
+                                    className={`text-xs ${
+                                        eventMessage.type === "success"
+                                            ? "text-emerald-600"
+                                            : "text-red-600"
+                                    }`}
+                                >
+                                    {eventMessage.text}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* фильтры */}
             <div className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:flex-row sm:items-center">
