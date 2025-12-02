@@ -35,3 +35,16 @@ payload - данные для создания записи в формате js
     "owner":"owner_id"
 }
 ```
+
+## Авторизация
+
+### `POST /auth/login`
+- **payload**: `{ "email": string, "passwordHash": string }`, где `passwordHash` — SHA‑256 от введённого пароля.
+- **ответ**: `accessToken`, `accessTokenExpiresAt`, `user`. Дополнительно сервер выставляет HttpOnly‑cookie `doghub_refresh_token` с долгоживущим refresh‑токеном.
+
+### `POST /auth/refresh`
+- Используется для прозрачного продления сессии. Refresh‑токен читается из HttpOnly‑cookie, поэтому тело запроса пустое.
+- **ответ**: такой же, как у логина (`accessToken`, `accessTokenExpiresAt`, `refreshTokenExpiresAt`, `user`). Предыдущий refresh‑токен ревокируется и заменяется новым.
+
+### `POST /auth/logout`
+- Сбрасывает текущий refresh‑токен и удаляет cookie. Тело запроса пустое, успешный ответ — `204 No Content`.

@@ -1,3 +1,5 @@
+import { tryRefreshAccessToken } from "../auth/tokenRefresher";
+
 export const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -19,22 +21,32 @@ async function requestWithAuth<T>(
     token: string,
     init: RequestInit = {}
 ): Promise<T> {
-    const headers = new Headers(init.headers ?? {});
-    if (!headers.has("Accept")) headers.set("Accept", "application/json");
-    if (init.body && !headers.has("Content-Type")) {
-        headers.set("Content-Type", "application/json");
-    }
-
     if (!token) {
         throw new Error("Для выполнения запроса нужен токен авторизации.");
     }
 
-    headers.set("Authorization", `Bearer ${token}`);
+    const send = async (bearer: string) => {
+        const headers = new Headers(init.headers ?? {});
+        if (!headers.has("Accept")) headers.set("Accept", "application/json");
+        if (init.body && !headers.has("Content-Type")) {
+            headers.set("Content-Type", "application/json");
+        }
+        headers.set("Authorization", `Bearer ${bearer}`);
 
-    const res = await fetch(`${API_BASE_URL}${path}`, {
-        ...init,
-        headers,
-    });
+        return fetch(`${API_BASE_URL}${path}`, {
+            ...init,
+            headers,
+        });
+    };
+
+    let res = await send(token);
+
+    if (res.status === 401) {
+        const refreshedToken = await tryRefreshAccessToken();
+        if (refreshedToken) {
+            res = await send(refreshedToken);
+        }
+    }
 
     let data: any = null;
     try {

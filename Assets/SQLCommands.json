@@ -35,8 +35,23 @@
   "get_member_by_email":
   "SELECT m.id AS member_id, m.full_name, m.phone, m.email, m.city, m.avatar_url, m.bio AS owner_bio, m.join_date, m.membership_end_date, m.role, m.password_hash AS password_hash FROM member m WHERE m.email = @email;",
 
+  "get_member_by_id":
+  "SELECT m.id AS member_id, m.full_name, m.phone, m.email, m.city, m.avatar_url, m.bio AS owner_bio, m.join_date, m.membership_end_date, m.role FROM member m WHERE m.id = @member_id;",
+
   "insert_member_for_auth":
   "INSERT INTO member (full_name, phone, email, city, avatar_url, bio, join_date, membership_end_date, role, password_hash) VALUES (@full_name, @phone, @email, @city, NULL, NULL, CURRENT_DATE, NULL, 'Пользователь', @password_hash);",
+
+  "insert_refresh_token":
+  "INSERT INTO refresh_token (member_id, token_hash, user_agent, ip_address, expires_at) VALUES (@member_id, @token_hash, @user_agent, @ip_address, @expires_at) RETURNING id, member_id, expires_at, revoked_at;",
+
+  "get_refresh_token":
+  "SELECT id, member_id, token_hash, user_agent, ip_address, created_at, expires_at, revoked_at FROM refresh_token WHERE token_hash = @token_hash AND revoked_at IS NULL AND expires_at > NOW() LIMIT 1;",
+
+  "revoke_refresh_token":
+  "UPDATE refresh_token SET revoked_at = CURRENT_TIMESTAMP WHERE id = @id RETURNING id;",
+
+  "revoke_member_tokens":
+  "UPDATE refresh_token SET revoked_at = CURRENT_TIMESTAMP WHERE member_id = @member_id AND revoked_at IS NULL;",
 
   "dog_report_info":
   "SELECT d.id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.bio AS dog_bio, d.tags, m.full_name AS owner_name, m.phone AS owner_phone, m.email AS owner_email, (SELECT COUNT(*) FROM program_registration pr WHERE pr.dog_id = d.id) AS program_count, (SELECT COUNT(*) FROM dog_service ds WHERE ds.dog_id = d.id) AS service_count, (SELECT COUNT(*) FROM event_registration er WHERE er.dog_id = d.id) AS event_count FROM dog d LEFT JOIN member m ON d.member_id = m.id WHERE d.id = @id;"

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using DogHub;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -32,16 +33,32 @@ public class Program
         builder.Services.AddSingleton<AvatarStorage>();
         builder.Services.AddSingleton<DogPhotoStorage>();
         builder.Services.AddSingleton<TokenService>();
+        builder.Services.AddSingleton<RefreshTokenService>();
 
         // Подключение контроллеров
         builder.Services.AddControllers();
 
         // Разрешение запросов с любых источников
-        builder.Services.AddCors(o =>
-            o.AddDefaultPolicy(p =>
-                p.AllowAnyOrigin()
-                 .AllowAnyHeader()
-                 .AllowAnyMethod()));
+        builder.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(policy =>
+            {
+                policy
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+
+                var origins = AppConfig.Instance().CorsAllowedOrigins;
+                if (origins.Count == 0)
+                {
+                    policy.AllowAnyOrigin();
+                }
+                else
+                {
+                    policy.WithOrigins(origins.ToArray())
+                          .AllowCredentials();
+                }
+            });
+        });
 
         // Настройка JWT-аутентификации
         var key = Encoding.UTF8.GetBytes(AppConfig.Instance().JwtSecret);
