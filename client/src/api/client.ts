@@ -69,6 +69,7 @@ export interface ApiEventRow {
     venue: string;
     price: number | null;
     description: string | null;
+    registeredCount?: number;
 }
 
 export function getEvents(): Promise<ApiEventRow[]> {
@@ -237,6 +238,119 @@ export type ApiPeopleTrainingRow = ApiEventRow;
 
 export function getPeopleTrainings(): Promise<ApiPeopleTrainingRow[]> {
     return getJson<ApiPeopleTrainingRow[]>("/people_events");
+}
+
+export interface UpsertEventPayload {
+    title?: string;
+    category?: string | null;
+    startAt?: string;
+    endAt?: string | null;
+    venue?: string;
+    price?: number | null;
+    description?: string | null;
+}
+
+function serializeEventPayload(
+    payload: UpsertEventPayload,
+    options?: { omitCategory?: boolean }
+): Record<string, unknown> {
+    const body: Record<string, unknown> = {};
+    if (payload.title !== undefined) body.title = payload.title;
+    if (!options?.omitCategory && payload.category !== undefined) {
+        body.category = payload.category;
+    }
+    if (payload.startAt !== undefined) body.start_at = payload.startAt;
+    if (payload.endAt !== undefined) body.end_at = payload.endAt;
+    if (payload.venue !== undefined) body.venue = payload.venue;
+    if (payload.price !== undefined) body.price = payload.price;
+    if (payload.description !== undefined) body.description = payload.description;
+    return body;
+}
+
+export function createEvent(payload: UpsertEventPayload, token: string) {
+    return requestWithAuth("/events", token, {
+        method: "POST",
+        body: JSON.stringify(serializeEventPayload(payload)),
+    });
+}
+
+export function updateEvent(
+    eventId: number,
+    payload: UpsertEventPayload,
+    token: string
+) {
+    return requestWithAuth(`/events/${eventId}`, token, {
+        method: "PUT",
+        body: JSON.stringify(serializeEventPayload(payload)),
+    });
+}
+
+export function deleteEvent(eventId: number, token: string) {
+    return requestWithAuth(`/events/${eventId}`, token, {
+        method: "DELETE",
+    });
+}
+
+export function createTraining(payload: UpsertEventPayload, token: string) {
+    return requestWithAuth("/events/education", token, {
+        method: "POST",
+        body: JSON.stringify(serializeEventPayload(payload, { omitCategory: true })),
+    });
+}
+
+export function updateTraining(
+    trainingId: number,
+    payload: UpsertEventPayload,
+    token: string
+) {
+    return requestWithAuth(`/events/education/${trainingId}`, token, {
+        method: "PUT",
+        body: JSON.stringify(serializeEventPayload(payload, { omitCategory: true })),
+    });
+}
+
+export function deleteTraining(trainingId: number, token: string) {
+    return deleteEvent(trainingId, token);
+}
+
+export interface UpsertProgramPayload {
+    title?: string;
+    type?: string;
+    price?: number | null;
+    description?: string | null;
+}
+
+function serializeProgramPayload(payload: UpsertProgramPayload): Record<string, unknown> {
+    const body: Record<string, unknown> = {};
+    if (payload.title !== undefined) body.title = payload.title;
+    if (payload.type !== undefined) body.type = payload.type;
+    if (payload.price !== undefined) body.price = payload.price;
+    if (payload.description !== undefined) body.description = payload.description;
+    return body;
+}
+
+export function createProgram(payload: UpsertProgramPayload, token: string) {
+    return requestWithAuth("/programs", token, {
+        method: "POST",
+        body: JSON.stringify(serializeProgramPayload(payload)),
+    });
+}
+
+export function updateProgram(
+    programId: number,
+    payload: UpsertProgramPayload,
+    token: string
+) {
+    return requestWithAuth(`/programs/${programId}`, token, {
+        method: "PUT",
+        body: JSON.stringify(serializeProgramPayload(payload)),
+    });
+}
+
+export function deleteProgram(programId: number, token: string) {
+    return requestWithAuth(`/programs/${programId}`, token, {
+        method: "DELETE",
+    });
 }
 
 export function registerForTraining(
