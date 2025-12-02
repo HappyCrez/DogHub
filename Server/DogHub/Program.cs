@@ -29,6 +29,7 @@ public class Program
         builder.Services.AddSingleton(AppConfig.Instance());
         builder.Services.AddSingleton(db);
         builder.Services.AddSingleton(SQLCommandManager.Instance);
+        builder.Services.AddSingleton<AvatarStorage>();
         builder.Services.AddSingleton<TokenService>();
 
         // Подключение контроллеров
