@@ -149,7 +149,7 @@ export default function Navbar() {
                             </button>
 
                             {profileMenuOpen && (
-                                <div className="absolute right-0 mt-2 w-44 rounded-2xl border border-gray-200 bg-white py-1 text-sm shadow-lg">
+                                <div className="absolute right-0 mt-2 w-44 overflow-hidden rounded-2xl border border-gray-200 bg-white py-1 text-sm shadow-lg">
                                     <Link
                                         to="/account"
                                         className="block px-3 py-2 text-left text-gray-800 hover:bg-gray-100"
