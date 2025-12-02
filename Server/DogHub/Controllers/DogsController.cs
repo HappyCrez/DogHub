@@ -80,7 +80,7 @@ public class DogsController : ControllerBase
 
     // Создание новой собаки
     [HttpPost]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult CreateDog([FromBody] JsonElement body)
     {
         try
@@ -118,7 +118,7 @@ public class DogsController : ControllerBase
 
     // Обновление собаки
     //
-    // Админ:
+    // Администратор:
     //   - может редактировать любые поля кроме id
     // Пользователь/Тренер:
     //   - могут редактировать ТОЛЬКО свои собаки (по member_id)
@@ -129,9 +129,9 @@ public class DogsController : ControllerBase
     {
         try
         {
-            var isAdmin = User.IsInRole("Админ");
+            var isAdmin = User.IsInRole("Администратор");
 
-            // Если не админ — проверяем, что собака принадлежит текущему пользователю
+            // Если не Администратор — проверяем, что собака принадлежит текущему пользователю
             if (!isAdmin)
             {
                 var currentUserIdStr =
@@ -184,7 +184,7 @@ public class DogsController : ControllerBase
 
             if (isAdmin)
             {
-                // Админ может менять любые поля (кроме id, чтобы не ломать PK)
+                // Администратор может менять любые поля (кроме id, чтобы не ломать PK)
                 foreach (var prop in body.EnumerateObject())
                 {
                     var column = prop.Name;
@@ -246,7 +246,7 @@ public class DogsController : ControllerBase
 
     // Удаление собаки
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Админ")]
+    [Authorize(Roles = "Администратор")]
     public IActionResult DeleteDog(int id)
     {
         try
