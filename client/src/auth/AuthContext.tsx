@@ -233,6 +233,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
     }, []);
 
+    const updateUser = (updates: Partial<AuthUser>) => {
+        if (!updates || typeof updates !== "object") return;
+
+        setUser((prev) => {
+            if (!prev) return prev;
+            const next = { ...prev, ...updates };
+            try {
+                localStorage.setItem(AUTH_USER_KEY, JSON.stringify(next));
+            } catch (e) {
+                console.error("Не удалось обновить данные пользователя в localStorage:", e);
+            }
+            return next;
+        });
+    };
+
     const value: AuthContextValue = {
         user,
         token,
