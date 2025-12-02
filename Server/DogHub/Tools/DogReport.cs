@@ -537,11 +537,38 @@ public class DogReport
         }
     }
 
+    /// <summary>
+    /// Позволяет хранить ссылки на фото как в виде абсолютных URL, так и в виде относительных путей.
+    /// </summary>
+    private string ResolvePhotoUrl(string? photoPath)
+    {
+        if (string.IsNullOrWhiteSpace(photoPath))
+        {
+            throw new ArgumentException("Photo path is empty", nameof(photoPath));
+        }
+
+        var trimmedPath = photoPath.Trim();
+
+        if (Uri.TryCreate(trimmedPath, UriKind.Absolute, out var absoluteUri) && absoluteUri.IsWellFormedOriginalString())
+        {
+            return absoluteUri.ToString();
+        }
+
+        var imageHost = AppConfig.Instance().ImageHost?.TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(imageHost))
+        {
+            throw new InvalidOperationException("Image host is not configured");
+        }
+
+        var relativePath = trimmedPath.TrimStart('/');
+        return $"{imageHost}/{relativePath}";
+    }
+
     private Image? LoadImageFromUrl(Div photo, string filename)
     {
         try
         {
-            string pathToFile = $"{AppConfig.Instance().ImageHost}/{filename.Trim()}";
+            string pathToFile = ResolvePhotoUrl(filename);
             using var response = httpClient.GetAsync(pathToFile).Result;
             Console.WriteLine(pathToFile);
             if (response.IsSuccessStatusCode)
