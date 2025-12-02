@@ -1,6 +1,6 @@
 {
-  "members":
-  "SELECT u.id AS member_id, u.full_name, u.phone, u.email, u.city, u.avatar_url, u.bio AS owner_bio, u.join_date, u.membership_end_date, u.role, d.id   AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo AS dog_photo, d.tags  AS dog_tags, d.bio AS dog_bio FROM member u LEFT JOIN dog d ON u.id = d.member_id WHERE u.role = 'Пользователь' ORDER BY u.full_name, d.name;",
+"members":
+"SELECT u.id AS member_id, u.full_name, u.phone, u.email, u.city, u.avatar_url, u.bio AS owner_bio, u.join_date, u.membership_end_date, u.role, d.id   AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo AS dog_photo, d.tags  AS dog_tags, d.bio AS dog_bio FROM member u LEFT JOIN dog d ON u.id = d.member_id ORDER BY u.full_name, d.name;",
 
   "events":
   "SELECT e.id, e.title, e.category, e.start_at, e.end_at, e.venue, e.price, e.description, (SELECT COUNT(*) FROM event_registration er WHERE er.event_id = e.id) AS registered_count FROM event e WHERE e.category <> 'Образование' OR e.category IS NULL ORDER BY e.start_at;",

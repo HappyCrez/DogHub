@@ -34,13 +34,18 @@ export default function Members() {
 
     const members = useMemo(() => groupUsers(rows), [rows]);
 
+    const publicMembers = useMemo(
+        () => members.filter((m) => (m.role ?? "Пользователь") === "Пользователь"),
+        [members]
+    );
+
     const filtered = useMemo(() => {
         const text = q.trim().toLowerCase();
         if (text === "") {
-            return members;
+            return publicMembers;
         }
 
-        return members.filter((m) => {
+        return publicMembers.filter((m) => {
             const base =
                 m.fullName.toLowerCase().includes(text) ||
                 (m.city ?? "").toLowerCase().includes(text);
@@ -53,7 +58,7 @@ export default function Members() {
 
             return base || dogsText;
         });
-    }, [members, q]);
+    }, [publicMembers, q]);
 
     return (
         <section className="space-y-4">

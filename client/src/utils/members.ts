@@ -17,6 +17,7 @@ export function groupUsers(rows: ApiUserWithDogRow[]): MemberWithDogs[] {
                 email: row.email,
                 joinDate: row.joinDate ?? undefined,
                 membershipEndDate: row.membershipEndDate ?? undefined,
+                role: row.role,
                 dogs: [],
             };
             map.set(row.memberId, member);

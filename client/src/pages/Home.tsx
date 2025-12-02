@@ -87,11 +87,19 @@ export default function Home() {
         };
     }, []);
 
+    const publicUserRows = useMemo(
+        () =>
+            userRows.filter(
+                (row) => (row.role ?? "Пользователь") === "Пользователь"
+            ),
+        [userRows]
+    );
+
     // сгруппированные участники (один раз на userId)
     const members: MemberSummary[] = useMemo(() => {
         const map = new Map<number, MemberSummary>();
 
-        for (const row of userRows) {
+        for (const row of publicUserRows) {
             if (!map.has(row.memberId)) {
                 map.set(row.memberId, {
                     id: row.memberId,
@@ -104,13 +112,13 @@ export default function Home() {
         }
 
         return Array.from(map.values());
-    }, [userRows]);
+    }, [publicUserRows]);
 
     // уникальные собаки
     const allDogs: DogShort[] = useMemo(() => {
         const dogMap = new Map<number, DogShort>();
 
-        for (const row of userRows) {
+        for (const row of publicUserRows) {
             if (row.dogId != null && !dogMap.has(row.dogId)) {
                 dogMap.set(row.dogId, {
                     id: row.dogId,
@@ -123,7 +131,7 @@ export default function Home() {
         }
 
         return Array.from(dogMap.values());
-    }, [userRows]);
+    }, [publicUserRows]);
 
     // статистика
     const now = Date.now();

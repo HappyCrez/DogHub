@@ -101,9 +101,7 @@ export function useCurrentMember(): UseCurrentMemberResult {
                 if (cancelled) return;
 
                 const current =
-                    members?.find((m) => m.id === ensuredMemberId) ??
-                    members[0] ??
-                    null;
+                    members?.find((m) => m.id === ensuredMemberId) ?? null;
 
                 setMember(current);
             } catch (err) {
