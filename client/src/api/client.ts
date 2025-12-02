@@ -104,6 +104,30 @@ export function getDogs(): Promise<ApiDog[]> {
     return getJson<ApiDog[]>("/dogs");
 }
 
+export interface CreateDogPayload {
+    name: string;
+    breed: string;
+    sex: "M" | "F";
+    birthDate?: string | null;
+    chipNumber?: string | null;
+    photo?: string | null;
+    bio?: string | null;
+    tags?: string[] | null;
+}
+
+export interface ApiCreatedDog {
+    id: number;
+    memberId: number;
+    name: string;
+    breed: string;
+    sex: "M" | "F";
+    birthDate?: string | null;
+    chipNumber?: string | null;
+    photo?: string | null;
+    bio?: string | null;
+    tags?: string[] | null;
+}
+
 // Только чипированные (chip_number IS NOT NULL)
 export function getChippedDogs(): Promise<ApiDog[]> {
     return getJson<ApiDog[]>("/dogs/chiped");
@@ -439,4 +463,69 @@ export async function uploadAvatar(
     }
 
     return data as UploadAvatarResponse;
+}
+
+export interface UploadDogPhotoResponse {
+    photoUrl: string;
+}
+
+export async function uploadDogPhoto(
+    file: File,
+    token: string
+): Promise<UploadDogPhotoResponse> {
+    if (!token) {
+        throw new Error("Для загрузки фото собаки нужен токен авторизации.");
+    }
+
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    const res = await fetch(`${API_BASE_URL}/me/dogs/photo`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+        },
+        body: formData,
+    });
+
+    let data: any = null;
+    try {
+        data = await res.json();
+    } catch {
+        // ignore
+    }
+
+    if (!res.ok) {
+        const message =
+            data && typeof data.error === "string"
+                ? data.error
+                : `Ошибка загрузки фото собаки (HTTP ${res.status})`;
+        throw new Error(message);
+    }
+
+    return data as UploadDogPhotoResponse;
+}
+
+function serializeDogPayload(payload: CreateDogPayload): Record<string, unknown> {
+    const body: Record<string, unknown> = {
+        name: payload.name,
+        breed: payload.breed,
+        sex: payload.sex,
+    };
+
+    if (payload.birthDate !== undefined) body.birthDate = payload.birthDate;
+    if (payload.chipNumber !== undefined) body.chipNumber = payload.chipNumber;
+    if (payload.photo !== undefined) body.photo = payload.photo;
+    if (payload.bio !== undefined) body.bio = payload.bio;
+    if (payload.tags !== undefined) body.tags = payload.tags;
+
+    return body;
+}
+
+export function createDog(payload: CreateDogPayload, token: string) {
+    return requestWithAuth<ApiCreatedDog>("/me/dogs", token, {
+        method: "POST",
+        body: JSON.stringify(serializeDogPayload(payload)),
+    });
 }

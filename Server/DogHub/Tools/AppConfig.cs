@@ -44,6 +44,8 @@ public class AppConfig
     public readonly string SshPassword;
     public readonly string AvatarRemoteDir;
     public readonly string AvatarPublicBaseUrl;
+    public readonly string DogPhotoRemoteDir;
+    public readonly string DogPhotoPublicBaseUrl;
 
     // Параметры JWT
     private readonly string jwtIssuer;
@@ -97,6 +99,12 @@ public class AppConfig
         SshPassword = GetValueFromEnv("SSH_PASSWORD");
         AvatarRemoteDir = GetValueFromEnv("AVATAR_REMOTE_DIR");
         AvatarPublicBaseUrl = GetValueFromEnv("AVATAR_PUBLIC_BASE_URL").TrimEnd('/');
+        DogPhotoRemoteDir = Environment.GetEnvironmentVariable("DOG_PHOTO_REMOTE_DIR")
+            ?? "/home/lexcivis/Pictures/DogHub/Dogs";
+        var dogPhotoPublicFromEnv = Environment.GetEnvironmentVariable("DOG_PHOTO_PUBLIC_BASE_URL");
+        DogPhotoPublicBaseUrl = string.IsNullOrWhiteSpace(dogPhotoPublicFromEnv)
+            ? $"{ImageHost.TrimEnd('/')}/Dogs"
+            : dogPhotoPublicFromEnv.TrimEnd('/');
 
         // JWT
         jwtIssuer = GetValueFromEnv("JWT_ISSUER") ?? "DogHubApi";
