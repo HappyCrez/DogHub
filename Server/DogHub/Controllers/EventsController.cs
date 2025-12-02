@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Collections.Generic;
 using DogHub;
@@ -14,6 +15,11 @@ public class EventsController : ControllerBase
 {
     private readonly DataBaseModel _db;
     private readonly SQLCommandManager _sql;
+    private static readonly HashSet<string> EventDateColumns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "start_at",
+        "end_at"
+    };
 
     public EventsController(DataBaseModel db, SQLCommandManager sql)
     {
@@ -98,63 +104,40 @@ public class EventsController : ControllerBase
     // POST /events
     [HttpPost]
     [Authorize(Roles = "Администратор")]
-    public IActionResult CreateEvent([FromBody] JsonElement body)
-    {
-        var columns = new List<string>();
-        var placeholders = new List<string>();
-        var parameters = new Dictionary<string, object?>();
+    public IActionResult CreateEvent([FromBody] JsonElement body) =>
+        CreateEventInternal(body, forcedCategory: null);
 
-        foreach (var prop in body.EnumerateObject())
-        {
-            var column = prop.Name;
-            columns.Add(column);
-            placeholders.Add("@" + column);
-            parameters[column] = ConvertJsonValue(prop.Value);
-        }
-
-        if (columns.Count == 0)
-            return BadRequest("Пустое тело запроса.");
-
-        var sql = $"INSERT INTO event ({string.Join(", ", columns)}) " +
-                  $"VALUES ({string.Join(", ", placeholders)});";
-
-        var json = _db.ExecuteSQL(sql, parameters);
-        return Content(json, "application/json");
-    }
+    // POST /events/education
+    [HttpPost("education")]
+    [Authorize(Roles = "Администратор")]
+    public IActionResult CreateEducationEvent([FromBody] JsonElement body) =>
+        CreateEventInternal(body, forcedCategory: "Образование");
 
     // PUT /events/{id}
     [HttpPut("{id:int}")]
     [Authorize(Roles = "Администратор")]
-    public IActionResult UpdateEvent(int id, [FromBody] JsonElement body)
-    {
-        var updates = new List<string>();
-        var parameters = new Dictionary<string, object?>();
+    public IActionResult UpdateEvent(int id, [FromBody] JsonElement body) =>
+        UpdateEventInternal(id, body, forcedCategory: null);
 
-        foreach (var prop in body.EnumerateObject())
-        {
-            if (prop.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var column = prop.Name;
-            updates.Add($"{column} = @{column}");
-            parameters[column] = ConvertJsonValue(prop.Value);
-        }
-
-        if (updates.Count == 0)
-            return BadRequest("Нет полей для обновления.");
-
-        parameters["id"] = id;
-        var sql = $"UPDATE event SET {string.Join(", ", updates)} WHERE id = @id;";
-
-        var json = _db.ExecuteSQL(sql, parameters);
-        return Content(json, "application/json");
-    }
+    // PUT /events/education/{id}
+    [HttpPut("education/{id:int}")]
+    [Authorize(Roles = "Администратор")]
+    public IActionResult UpdateEducationEvent(int id, [FromBody] JsonElement body) =>
+        UpdateEventInternal(id, body, forcedCategory: "Образование");
 
     // DELETE /events/{id}
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Администратор")]
     public IActionResult DeleteEvent(int id)
     {
+        if (HasEventRegistrations(id))
+        {
+            return Conflict(new
+            {
+                error = "Нельзя удалить событие: уже есть зарегистрированные участники или собаки."
+            });
+        }
+
         var parameters = new Dictionary<string, object?>
         {
             ["id"] = id
@@ -181,6 +164,152 @@ public class EventsController : ControllerBase
             default:
                 return element.GetRawText();
         }
+    }
+
+    private static object? ConvertEventValue(string column, JsonElement element)
+    {
+        if (EventDateColumns.Contains(column))
+        {
+            if (element.ValueKind == JsonValueKind.Null)
+                return null;
+
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                var raw = element.GetString();
+                if (string.IsNullOrWhiteSpace(raw))
+                    return null;
+
+                if (DateTime.TryParse(
+                        raw,
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeLocal | DateTimeStyles.AllowWhiteSpaces,
+                        out var dt))
+                {
+                    return DateTime.SpecifyKind(dt, DateTimeKind.Local);
+                }
+
+                if (DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dto))
+                {
+                    return dto.UtcDateTime;
+                }
+            }
+        }
+
+        return ConvertJsonValue(element);
+    }
+
+    private IActionResult CreateEventInternal(JsonElement body, string? forcedCategory)
+    {
+        var columns = new List<string>();
+        var placeholders = new List<string>();
+        var parameters = new Dictionary<string, object?>();
+        var hasCategory = false;
+
+        foreach (var prop in body.EnumerateObject())
+        {
+            var column = prop.Name;
+            columns.Add(column);
+            placeholders.Add("@" + column);
+            parameters[column] = ConvertEventValue(column, prop.Value);
+
+            if (column.Equals("category", StringComparison.OrdinalIgnoreCase))
+                hasCategory = true;
+        }
+
+        if (forcedCategory is not null)
+        {
+            if (!hasCategory)
+            {
+                columns.Add("category");
+                placeholders.Add("@category");
+            }
+            parameters["category"] = forcedCategory;
+        }
+
+        if (columns.Count == 0)
+            return BadRequest("Пустое тело запроса.");
+
+        var sql = $"INSERT INTO event ({string.Join(", ", columns)}) " +
+                  $"VALUES ({string.Join(", ", placeholders)});";
+
+        var json = _db.ExecuteSQL(sql, parameters);
+        return Content(json, "application/json");
+    }
+
+    private IActionResult UpdateEventInternal(int id, JsonElement body, string? forcedCategory)
+    {
+        var updates = new List<string>();
+        var parameters = new Dictionary<string, object?>();
+        var hasCategory = false;
+
+        foreach (var prop in body.EnumerateObject())
+        {
+            if (prop.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var column = prop.Name;
+            if (column.Equals("category", StringComparison.OrdinalIgnoreCase))
+                hasCategory = true;
+
+            updates.Add($"{column} = @{column}");
+            parameters[column] = ConvertEventValue(column, prop.Value);
+        }
+
+        if (forcedCategory is not null)
+        {
+            parameters["category"] = forcedCategory;
+            if (!hasCategory)
+            {
+                updates.Add("category = @category");
+            }
+        }
+
+        if (updates.Count == 0)
+            return BadRequest("Нет полей для обновления.");
+
+        parameters["id"] = id;
+        var sql = $"UPDATE event SET {string.Join(", ", updates)} WHERE id = @id;";
+
+        var json = _db.ExecuteSQL(sql, parameters);
+        return Content(json, "application/json");
+    }
+
+    private bool HasEventRegistrations(int eventId)
+    {
+        var sql = @"
+            SELECT COUNT(*) AS reg_count
+            FROM event_registration
+            WHERE event_id = @event_id;";
+        var parameters = new Dictionary<string, object?>
+        {
+            ["event_id"] = eventId
+        };
+
+        var json = _db.ExecuteSQL(sql, parameters);
+        if (string.IsNullOrWhiteSpace(json))
+            return false;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() == 0)
+                return false;
+
+            var first = root[0];
+            if (first.TryGetProperty("regCount", out var countProp) &&
+                countProp.ValueKind == JsonValueKind.Number &&
+                countProp.TryGetInt32(out var count))
+            {
+                return count > 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[HasEventRegistrations] {ex}");
+        }
+
+        return false;
     }
 
     // POST /events/{eventId}/dogs

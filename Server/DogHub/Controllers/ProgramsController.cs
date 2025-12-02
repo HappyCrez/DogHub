@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.Json;
 using System.Collections.Generic;
 using DogHub;
@@ -15,6 +16,13 @@ public class ProgramsController : ControllerBase
 {
     private readonly DataBaseModel _db;
     private readonly SQLCommandManager _sql;
+    private static readonly HashSet<string> ProgramColumns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "title",
+        "type",
+        "price",
+        "description"
+    };
 
     public ProgramsController(DataBaseModel db, SQLCommandManager sql)
     {
@@ -85,23 +93,24 @@ public class ProgramsController : ControllerBase
             var placeholders = new List<string>();
             var parameters = new Dictionary<string, object?>();
 
-            // Формирование колонок и параметров
             foreach (var prop in body.EnumerateObject())
             {
                 var column = prop.Name;
+                if (!ProgramColumns.Contains(column))
+                    continue;
+
                 columns.Add(column);
-                placeholders.Add("@" + column);
+                placeholders.Add(BuildProgramPlaceholder(column));
                 parameters[column] = ConvertJsonValue(prop.Value);
             }
 
             if (columns.Count == 0)
                 return BadRequest("Пустое тело запроса");
 
-            // Формирование SQL-запроса
+            var quotedColumns = columns.Select(QuoteIdentifier);
             var sql =
-                $"INSERT INTO program ({string.Join(", ", columns)}) VALUES ({string.Join(", ", placeholders)});";
+                $"INSERT INTO program ({string.Join(", ", quotedColumns)}) VALUES ({string.Join(", ", placeholders)});";
 
-            // Выполнение запроса
             string json = _db.ExecuteSQL(sql, parameters);
             return Content(json, "application/json");
         }
@@ -129,21 +138,20 @@ public class ProgramsController : ControllerBase
                     continue;
 
                 var column = prop.Name;
-                updates.Add($"{column} = @{column}");
+                if (!ProgramColumns.Contains(column))
+                    continue;
+
+                updates.Add($"{QuoteIdentifier(column)} = {BuildProgramPlaceholder(column)}");
                 parameters[column] = ConvertJsonValue(prop.Value);
             }
 
             if (updates.Count == 0)
                 return BadRequest("Нет полей для обновления");
 
-            // Добавление ID
             parameters["id"] = id;
-
-            // Формирование SQL-запроса
             var sql =
                 $"UPDATE program SET {string.Join(", ", updates)} WHERE id = @id;";
 
-            // Выполнение запроса
             string json = _db.ExecuteSQL(sql, parameters);
             return Content(json, "application/json");
         }
@@ -159,14 +167,20 @@ public class ProgramsController : ControllerBase
     [Authorize(Roles = "Администратор")]
     public IActionResult DeleteProgram(int id)
     {
+        if (HasProgramRegistrations(id))
+        {
+            return Conflict(new
+            {
+                error = "Нельзя удалить программу: есть записанные собаки."
+            });
+        }
+
         try
         {
             var parameters = new Dictionary<string, object?> { ["id"] = id };
 
-            // Формирование SQL-запроса
             var sql = "DELETE FROM program WHERE id = @id;";
 
-            // Выполнение запроса
             string json = _db.ExecuteSQL(sql, parameters);
             return Content(json, "application/json");
         }
@@ -175,6 +189,55 @@ public class ProgramsController : ControllerBase
             Console.WriteLine($"[DeleteProgram] {ex}");
             return StatusCode(500, new { error = "Ошибка при удалении программы" });
         }
+    }
+
+    private bool HasProgramRegistrations(int programId)
+    {
+        var sql = @"
+            SELECT COUNT(*) AS reg_count
+            FROM program_registration
+            WHERE program_id = @program_id;";
+        var parameters = new Dictionary<string, object?>
+        {
+            ["program_id"] = programId
+        };
+
+        var json = _db.ExecuteSQL(sql, parameters);
+        if (string.IsNullOrWhiteSpace(json))
+            return false;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() == 0)
+                return false;
+
+            var first = root[0];
+            if (first.TryGetProperty("regCount", out var countProp) &&
+                countProp.ValueKind == JsonValueKind.Number &&
+                countProp.TryGetInt32(out var count))
+            {
+                return count > 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[HasProgramRegistrations] {ex}");
+        }
+
+        return false;
+    }
+
+    private static string QuoteIdentifier(string column) =>
+        $"\"{column.Replace("\"", "\"\"")}\"";
+
+    private static string BuildProgramPlaceholder(string column)
+    {
+        var placeholder = "@" + column;
+        return column.Equals("type", StringComparison.OrdinalIgnoreCase)
+            ? placeholder + "::program_type"
+            : placeholder;
     }
 
     // Преобразование JSON-значения в объект C#

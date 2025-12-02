@@ -3,7 +3,7 @@
   "SELECT u.id AS member_id, u.full_name, u.phone, u.email, u.city, u.avatar_url, u.bio AS owner_bio, u.join_date, u.membership_end_date, u.role, d.id   AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo AS dog_photo, d.tags  AS dog_tags, d.bio AS dog_bio FROM member u LEFT JOIN dog d ON u.id = d.member_id WHERE u.role = 'Пользователь' ORDER BY u.full_name, d.name;",
 
   "events":
-  "SELECT id, title, category, start_at, end_at, venue, price, description FROM event WHERE category <> 'Образование' OR category IS NULL ORDER BY start_at;",
+  "SELECT e.id, e.title, e.category, e.start_at, e.end_at, e.venue, e.price, e.description, (SELECT COUNT(*) FROM event_registration er WHERE er.event_id = e.id) AS registered_count FROM event e WHERE e.category <> 'Образование' OR e.category IS NULL ORDER BY e.start_at;",
 
   "event":
   "SELECT id, title, category, start_at, end_at, venue, price, description FROM event WHERE id = @id;",
@@ -12,7 +12,7 @@
   "SELECT p.id, p.title, p.type, p.price, p.description, COUNT(pr.dog_id) AS registered_dogs_count FROM program p LEFT JOIN program_registration pr ON p.id = pr.program_id GROUP BY p.id, p.title, p.type, p.price, p.description ORDER BY p.type, p.title;",
 
   "people_events":
-  "SELECT id, title, category, start_at, end_at, venue, price, description FROM event WHERE category = 'Образование' ORDER BY start_at DESC;",
+  "SELECT e.id, e.title, e.category, e.start_at, e.end_at, e.venue, e.price, e.description, (SELECT COUNT(*) FROM event_registration er WHERE er.event_id = e.id) AS registered_count FROM event e WHERE e.category = 'Образование' ORDER BY e.start_at DESC;",
 
   "chiped":
   "SELECT d.id AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.tags, d.bio, u.full_name AS owner_name, u.phone AS owner_phone, u.email AS owner_email FROM dog d JOIN member u ON d.member_id = u.id WHERE d.chip_number IS NOT NULL ORDER BY u.full_name, d.name;",
