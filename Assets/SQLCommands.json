@@ -1,6 +1,6 @@
 {
-"members":
-"SELECT u.id AS member_id, u.full_name, u.phone, u.email, u.city, u.avatar_url, u.bio AS owner_bio, u.join_date, u.membership_end_date, u.role, d.id   AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo AS dog_photo, d.tags  AS dog_tags, d.bio AS dog_bio FROM member u LEFT JOIN dog d ON u.id = d.member_id ORDER BY u.full_name, d.name;",
+  "members":
+  "SELECT u.id AS member_id, u.full_name, u.phone, u.email, u.city, u.avatar_url, u.bio AS owner_bio, u.join_date, u.membership_end_date, u.role, d.id   AS dog_id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo AS dog_photo, d.tags  AS dog_tags, d.bio AS dog_bio FROM member u LEFT JOIN dog d ON u.id = d.member_id ORDER BY u.full_name, d.name;",
 
   "events":
   "SELECT e.id, e.title, e.category, e.start_at, e.end_at, e.venue, e.price, e.description, (SELECT COUNT(*) FROM event_registration er WHERE er.event_id = e.id) AS registered_count FROM event e WHERE e.category <> 'Образование' OR e.category IS NULL ORDER BY e.start_at;",
@@ -29,9 +29,6 @@
   "event_members": 
   "SELECT DISTINCT m.id AS member_id, m.full_name, m.phone, m.email, m.city, m.avatar_url, m.bio, m.join_date, m.membership_end_date, m.role FROM event_registration er JOIN member m ON er.member_id = m.id WHERE er.event_id = @event_id;",
   
-  "notifications":
-  "SELECT * from member WHERE id=1;",
-  
   "get_member_by_email":
   "SELECT m.id AS member_id, m.full_name, m.phone, m.email, m.city, m.avatar_url, m.bio AS owner_bio, m.join_date, m.membership_end_date, m.role, m.password_hash AS password_hash FROM member m WHERE m.email = @email;",
 
@@ -54,5 +51,14 @@
   "UPDATE refresh_token SET revoked_at = CURRENT_TIMESTAMP WHERE member_id = @member_id AND revoked_at IS NULL;",
 
   "dog_report_info":
-  "SELECT d.id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.bio AS dog_bio, d.tags, m.full_name AS owner_name, m.phone AS owner_phone, m.email AS owner_email, (SELECT COUNT(*) FROM program_registration pr WHERE pr.dog_id = d.id) AS program_count, (SELECT COUNT(*) FROM dog_service ds WHERE ds.dog_id = d.id) AS service_count, (SELECT COUNT(*) FROM event_registration er WHERE er.dog_id = d.id) AS event_count FROM dog d LEFT JOIN member m ON d.member_id = m.id WHERE d.id = @id;"
+  "SELECT d.id, d.name AS dog_name, d.breed, d.sex, d.birth_date, d.chip_number, d.photo, d.bio AS dog_bio, d.tags, m.full_name AS owner_name, m.phone AS owner_phone, m.email AS owner_email, (SELECT COUNT(*) FROM program_registration pr WHERE pr.dog_id = d.id) AS program_count, (SELECT COUNT(*) FROM dog_service ds WHERE ds.dog_id = d.id) AS service_count, (SELECT COUNT(*) FROM event_registration er WHERE er.dog_id = d.id) AS event_count FROM dog d LEFT JOIN member m ON d.member_id = m.id WHERE d.id = @id;",
+
+  "payment":
+  "SELECT ds.id AS service_id, ds.service_name, ds.requested_at, ds.performed_at, ds.price, ds.status, d.name AS dog_name, d.breed, d.sex, d.birth_date, m.full_name AS owner_name, m.email AS owner_email, m.phone AS owner_phone, m.city AS owner_city, st.name AS service_type FROM dog_service ds JOIN dog d ON ds.dog_id = d.id JOIN member m ON d.member_id = m.id LEFT JOIN service_type st ON ds.service_type_id = st.id WHERE ds.id = @id;",
+
+  "notifications":
+  "SELECT * from member WHERE id=1;",
+
+  "member":
+  "SELECT * from member WHERE id=@id;"
 }

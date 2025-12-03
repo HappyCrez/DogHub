@@ -17,8 +17,12 @@ public class MailService
     private readonly int timeout;
     private DateTime lastNotification;
     
-    private readonly string notificationSubject = "DogHub Notification";
-    private string notificationBody; // Формат уведомления
+    // Формат уведомления писем
+    private string notification;
+    private string payment;
+    private string welcome;
+
+    // Флаг управления потоком
     private bool mailServiceRunning;
 
     private DataBaseModel database { get; set; }
@@ -36,7 +40,7 @@ public class MailService
             Thread.Sleep(100);
             if ((DateTime.Now-lastNotification).TotalSeconds >= timeout)
             {
-                Notificate();
+                // Notificate();
                 lastNotification = DateTime.Now;
             }
         }
@@ -65,7 +69,7 @@ public class MailService
 
             //TODO::В РЕЛИЗ ДОБАВИТЬ ПАРАМЕТРЫ СУММЫ И ДАТА ПОСЛЕДНЕГО ПЛАТЕЖА ДЛЯ ЭТОГО НУЖНО ПОМЕНЯТЬ ЗАПРОС "notifications"
             string today = DateTime.Now.ToString("dd MMMM yyyy", rus);
-            SendEmail(email, notificationSubject, TextFormatter.ModifyStr(notificationBody,[name, today]));
+            SendEmail(email, "Ваша подписка на DogHub скоро закончится!", TextFormatter.ModifyStr(notification,[name, today]));
         }
     }
 
@@ -77,14 +81,10 @@ public class MailService
     /// <param name="body">Текст сообщения в формате html</param>
     private void SendEmail(string toEmail, string subject, string body)
     {
-        if (MailDebug) // В режиме debug все сообщения отправляются hostEmail
-        {
-            toEmail = hostName;
-        }
         if (AppConfig.Instance().LogLevel <= AppConfig.LogLevels.DEBUG)
         {
             Console.WriteLine($"Отправляем сообщение {toEmail}");
-        }    
+        }
         try
         {
             var fromAddress = new MailAddress(hostName, "DogHub Company");
@@ -137,6 +137,57 @@ public class MailService
     }
 
     /// <summary>
+    /// Принимает id платежа и формирует сообщение для отправки уведомления клиенту
+    /// Выбрасывает исключение если совершить операцию не удалось
+    /// </summary>
+    /// <param name="paymentId">id платежа в БД</param>
+    public void PaymentNotification(int paymentId)
+    {
+        // Получаем данные платежа
+        var paymentParams = new Dictionary<string, object?> { ["id"] = paymentId };
+        string paymentData = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand("payment"), paymentParams);
+
+        JsonElement info = JsonDocument.Parse(paymentData).RootElement[0];
+        string email = string.Empty;
+        if (info.TryGetProperty("ownerEmail", out JsonElement emailElement))
+        {
+            email = emailElement.GetString() ??
+                throw new InvalidOperationException("Invalid response from server");
+        }
+        string userName = string.Empty;
+        if (info.TryGetProperty("ownerName", out JsonElement nameElement))
+        {
+            userName = nameElement.GetString() ?? "Уважаемый пользователь";
+        }
+        SendEmail(email, "Информация о платеже", TextFormatter.ModifyStr(payment,[userName]));
+    }
+
+    /// <summary>
+    /// Принимает id нового участника и отправляет ему приветственное сообщение
+    /// </summary>
+    /// <param name="memberId">id пользователя в БД</param>
+    public void WelcomeNotification(int memberId)
+    {
+        // Получаем данные платежа
+        var memberParams = new Dictionary<string, object?> { ["id"] = memberId };
+        string memberData = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand("member"), memberParams);
+
+        JsonElement info = JsonDocument.Parse(memberData).RootElement[0];
+        string email = string.Empty;
+        if (info.TryGetProperty("email", out JsonElement emailElement))
+        {
+            email = emailElement.GetString() ??
+                throw new InvalidOperationException("Invalid response from server");
+        }
+        string userName = string.Empty;
+        if (info.TryGetProperty("full_name", out JsonElement nameElement))
+        {
+            userName = nameElement.GetString() ?? "Уважаемый пользователь";
+        }
+        SendEmail(email, "Добро пожаловать", TextFormatter.ModifyStr(welcome,[userName]));
+    }
+
+    /// <summary>
     /// Конфигурирует почтовый сервис
     /// </summary>
     /// <param name="database">
@@ -149,7 +200,9 @@ public class MailService
         this.timeout = int.Parse(AppConfig.Instance().MailTimeout);
 
         // Читаем формат уведомления подготовленный в файле
-        this.notificationBody = File.ReadAllText(AppConfig.Instance().MailFilePath);
+        notification = File.ReadAllText($"{AppConfig.Instance().MailFilePath}/MailNotification.html");
+        payment = File.ReadAllText($"{AppConfig.Instance().MailFilePath}/MailPayment.html");
+        welcome = File.ReadAllText($"{AppConfig.Instance().MailFilePath}/MailWelcome.html");
 
         // БД для исполнения запросов
         this.database = database;
