@@ -9,8 +9,6 @@ using DogHub;
 /// </summary>
 public class MailService
 {
-    private bool MailDebug = true; // TODO::REMOVE
-
     private readonly string hostName;
     private readonly string hostPassword;
     private readonly int port = 587;
@@ -40,7 +38,7 @@ public class MailService
             Thread.Sleep(100);
             if ((DateTime.Now-lastNotification).TotalSeconds >= timeout)
             {
-                // Notificate();
+                // Notificate(); // Нуждается в доработке
                 lastNotification = DateTime.Now;
             }
         }
@@ -51,11 +49,11 @@ public class MailService
         string records = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand("notifications"));
         foreach (JsonElement client in JsonDocument.Parse(records).RootElement.EnumerateArray())
         {
-            string name = "Клиент";
+            string userName = "Клиент";
             string email = string.Empty;
             if (client.TryGetProperty("fullName", out JsonElement nameElement))
             {
-                name = nameElement.GetString() ?? "Клиент";
+                userName = nameElement.GetString() ?? "Клиент";
             }
             if (client.TryGetProperty("email", out JsonElement emailElement))
             {
@@ -66,10 +64,24 @@ public class MailService
             {
                 continue;
             }
+            int clientId = -1;
+            if (client.TryGetProperty("id", out JsonElement idElement))
+            {
+                clientId = int.Parse(idElement.GetString() ?? "-1");
+                if (clientId == -1)
+                {   // Неверный идентификатор
+                    continue;
+                }
+            }
 
-            //TODO::В РЕЛИЗ ДОБАВИТЬ ПАРАМЕТРЫ СУММЫ И ДАТА ПОСЛЕДНЕГО ПЛАТЕЖА ДЛЯ ЭТОГО НУЖНО ПОМЕНЯТЬ ЗАПРОС "notifications"
+            // НЕЗАКОНЧЕННО
+            // Необходимо чтобы здесь мы получали все платежи клиента и искали среди них последний платеж за подписку
+            // А затем сравнивали дату последнего платежа с текущей  
+            string clientPayments = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand(""));
+
             string today = DateTime.Now.ToString("dd MMMM yyyy", rus);
-            SendEmail(email, "Ваша подписка на DogHub скоро закончится!", TextFormatter.ModifyStr(notification,[name, today]));
+            email = hostName;
+            SendEmail(email, "Ваша подписка на DogHub скоро закончится!", TextFormatter.ModifyStr(notification,[userName, today]));
         }
     }
 
@@ -159,7 +171,13 @@ public class MailService
         {
             userName = nameElement.GetString() ?? "Уважаемый пользователь";
         }
-        SendEmail(email, "Информация о платеже", TextFormatter.ModifyStr(payment,[userName]));
+        string sum = string.Empty;
+        if (info.TryGetProperty("price", out JsonElement nameElement))
+        {
+            userName = nameElement.GetString() ?? "Не указано";
+        }
+        string today = DateTime.Now.ToString("dd MMMM yyyy", rus);
+        SendEmail(email, "Информация о платеже", TextFormatter.ModifyStr(payment,[userName, today, sum]));
     }
 
     /// <summary>
@@ -184,7 +202,7 @@ public class MailService
         {
             userName = nameElement.GetString() ?? "Уважаемый пользователь";
         }
-        SendEmail(email, "Добро пожаловать", TextFormatter.ModifyStr(welcome,[userName]));
+        SendEmail(email, "Добро пожаловать", TextFormatter.ModifyStr(welcome,[userName, userName]));
     }
 
     /// <summary>
