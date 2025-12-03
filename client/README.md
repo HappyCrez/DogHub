@@ -1,8 +1,8 @@
-# DogHub client
+# Клиент DogHub
 
-Frontend for the DogHub platform is built with Vite, React 19 and TypeScript. This package contains the SPA itself, development tooling (Vite dev server, ESLint) and the automated test suite powered by Vitest + Testing Library.
+Фронтенд DogHub построен на Vite, React 19 и TypeScript. В репозитории лежит само SPA, dev‑сервер, ESLint‑конфигурация и автотесты на Vitest + Testing Library.
 
-## Getting started
+## Быстрый старт
 
 ```bash
 cd client
@@ -10,35 +10,33 @@ npm install
 npm run dev
 ```
 
-## Running the automated tests
+## Автотесты
 
-Vitest is configured in `vitest.config.ts` with jsdom, React Testing Library helpers (`src/test/setup.ts`) and coverage reporters. Typical commands:
+Vitest настроен в `vitest.config.ts`, окружение jsdom и хелперы из `src/test/setup.ts`. Основные сценарии:
 
 ```bash
-# run the entire suite once (used in CI)
+# полный прогон (то же, что в CI)
 npm run test
 
-# interactive watch mode during development
+# режим наблюдения
 npm run test -- --watch
 
-# focus on a single file or pattern
+# запуск конкретного файла/маски
 npm run test -- src/pages/__tests__/Events.test.tsx
 ```
 
-The suite covers:
+Покрытие включает:
 
-- smoke and integration tests for the main pages (home, dogs, events, account)
-- CRUD-oriented components such as the admin forms, profile/dog modals and cards
-- hooks (`useAdminAccess`, `useCurrentMember`) and shared utils (`groupUsers`)
+- smoke/интеграционные тесты страниц (главная, собаки, события, кабинет)
+- CRUD‑компоненты: админские формы, модалки профиля/собаки, карточки
+- хуки (`useAdminAccess`, `useCurrentMember`) и утилиту `groupUsers`
 
-All helpers live in `src/test/` (custom render with Router/Auth providers, fixtures, global stubs for ResizeObserver, matchMedia, etc.).
+Все вспомогательные утилиты и фикстуры находятся в `src/test/` (кастомный `renderWithProviders`, подстановки для ResizeObserver/matchMedia, фабрики данных и т.д.).
 
-## Linting
-
-ESLint is available via:
+## Линтинг
 
 ```bash
 npm run lint
 ```
 
-The config already ships with the React 19 recommended ruleset. Feel free to extend it if you need stricter checks.
+Конфигурация уже содержит рекомендуемые правила React 19, при необходимости можно расширять её своими плагинами.
