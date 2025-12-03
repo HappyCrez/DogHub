@@ -542,7 +542,8 @@ ALTER SEQUENCE public.refresh_token_id_seq OWNED BY public.refresh_token.id;
 
 CREATE TABLE public.service_type (
     id integer NOT NULL,
-    name character varying(120) NOT NULL
+    name character varying(120) NOT NULL,
+    price numeric(10,2)
 );
 
 
@@ -659,6 +660,9 @@ ALTER TABLE ONLY public.refresh_token ALTER COLUMN id SET DEFAULT nextval('publi
 --
 
 ALTER TABLE ONLY public.service_type ALTER COLUMN id SET DEFAULT nextval('public.service_type_id_seq'::regclass);
+
+ALTER TABLE ONLY public.service_type
+    ADD COLUMN price numeric(10,2);
 
 
 --
@@ -916,12 +920,12 @@ COPY public.program_session (id, program_id, session_datetime, duration_min, att
 -- Data for Name: service_type; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.service_type (id, name) FROM stdin;
-1	Чипирование
-2	Вакцинация
-3	Груминг
-4	Ветеринарный осмотр
-5	Кинологическая консультация
+COPY public.service_type (id, name, price) FROM stdin;
+1	Чипирование	2000.00
+2	Вакцинация	1500.00
+3	Груминг	2500.00
+4	Ветеринарный осмотр	1800.00
+5	Кинологическая консультация	1200.00
 \.
 
 

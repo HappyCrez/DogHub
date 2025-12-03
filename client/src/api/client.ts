@@ -116,6 +116,58 @@ export function getDogs(): Promise<ApiDog[]> {
     return getJson<ApiDog[]>("/dogs");
 }
 
+/* ===== услуги клуба ===== */
+
+export interface ApiServiceType {
+    id: number;
+    name: string;
+    price: number | null;
+}
+
+export interface ApiDogServiceRow {
+    id: number;
+    dogId: number;
+    dogName: string;
+    serviceTypeId: number;
+    serviceName: string;
+    requestedAt: string;
+    performedAt?: string | null;
+    price?: number | null;
+    status: string;
+}
+
+export interface ApiDogServicesResponse {
+    services: ApiDogServiceRow[];
+    statusLabels: Record<string, string>;
+}
+
+export function getServiceTypes(): Promise<ApiServiceType[]> {
+    return getJson<ApiServiceType[]>("/services/types");
+}
+
+export function getMyDogServices(token: string) {
+    return requestWithAuth<ApiDogServicesResponse>("/services/my", token);
+}
+
+export interface BookDogServicePayload {
+    dogId: number;
+    serviceTypeId: number;
+    requestedAt: string;
+}
+
+export function bookDogService(payload: BookDogServicePayload, token: string) {
+    return requestWithAuth("/services/book", token, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
+}
+
+export function cancelDogService(serviceId: number, token: string) {
+    return requestWithAuth(`/services/${serviceId}`, token, {
+        method: "DELETE",
+    });
+}
+
 export interface CreateDogPayload {
     name: string;
     breed: string;

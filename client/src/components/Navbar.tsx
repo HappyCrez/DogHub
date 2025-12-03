@@ -14,6 +14,7 @@ const idle = "text-gray-700 hover:bg-gray-200";
 const navItems: NavItem[] = [
     { to: "/", label: "Главная" },
     { to: "/dogs", label: "Собаки" },
+    { to: "/services", label: "Услуги" },
     { to: "/events", label: "События" },
     { to: "/training", label: "Обучение" },
     { to: "/members", label: "Участники" },
