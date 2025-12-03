@@ -24,7 +24,7 @@ interface LoginPayload {
     accessTokenExpiresAt?: string | null;
 }
 
-interface AuthContextValue {
+export interface AuthContextValue {
     user: AuthUser | null;
     token: string | null;
     isAuthenticated: boolean;
@@ -35,7 +35,7 @@ interface AuthContextValue {
     refresh: () => Promise<boolean>;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
