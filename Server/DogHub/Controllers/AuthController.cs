@@ -118,6 +118,23 @@ public class AuthController : ControllerBase
 
             var userElement = userRoot[0];
 
+            try
+            {
+                if (MailService.Instance != null &&
+                    userElement.TryGetProperty("memberId", out var memberIdProp) &&
+                    memberIdProp.ValueKind == JsonValueKind.Number &&
+                    memberIdProp.TryGetInt32(out var memberId))
+                {
+                    MailService.Instance.WelcomeNotification(memberId);
+                }
+            }
+            catch (Exception mailEx)
+            {
+                // Не ломаем регистрацию из-за почты
+                Console.WriteLine($"[Register] mail error: {mailEx}");
+            }
+
+
             // Формируем обычный словарь без passwordHash
             var userDict = BuildUserDictionary(userElement);
 

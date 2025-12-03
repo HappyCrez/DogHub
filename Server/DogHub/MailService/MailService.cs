@@ -9,6 +9,8 @@ using DogHub;
 /// </summary>
 public class MailService
 {
+    public static MailService? Instance { get; private set; }
+
     private readonly string hostName;
     private readonly string hostPassword;
     private readonly int port = 587;
@@ -145,6 +147,11 @@ public class MailService
     public void MailServiceStop()
     {
         mailServiceRunning = false;
+
+        if (Instance == this)
+        {
+            Instance = null;   // <--- добавить
+        }
     }
 
     /// <summary>
@@ -185,7 +192,6 @@ public class MailService
     /// <param name="memberId">id пользователя в БД</param>
     public void WelcomeNotification(int memberId)
     {
-        // Получаем данные платежа
         var memberParams = new Dictionary<string, object?> { ["id"] = memberId };
         string memberData = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand("member"), memberParams);
 
@@ -196,12 +202,14 @@ public class MailService
             email = emailElement.GetString() ??
                 throw new InvalidOperationException("Invalid response from server");
         }
+
         string userName = string.Empty;
-        if (info.TryGetProperty("full_name", out JsonElement nameElement))
+        if (info.TryGetProperty("fullName", out JsonElement nameElement)) // <-- тут fullName
         {
             userName = nameElement.GetString() ?? "Уважаемый пользователь";
         }
-        SendEmail(email, "Добро пожаловать", TextFormatter.ModifyStr(welcome,[userName, userName]));
+
+        SendEmail(email, "Добро пожаловать", TextFormatter.ModifyStr(welcome, [userName, userName]));
     }
 
     /// <summary>
@@ -212,6 +220,8 @@ public class MailService
     /// </param>
     public MailService(DataBaseModel database)
     {
+        Instance = this;
+
         this.hostName = AppConfig.Instance().MailHost;
         this.hostPassword = AppConfig.Instance().MailPassword;
         this.timeout = int.Parse(AppConfig.Instance().MailTimeout);

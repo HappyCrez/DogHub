@@ -153,6 +153,36 @@ public class ServicesController : ControllerBase
                 Console.WriteLine("[BookDogService] Вставка заявки не вернула результат");
                 return StatusCode(500, new { error = "Не удалось сохранить заявку" });
             }
+
+            // Пытаемся отправить письмо о платеже / заявке
+            try
+            {
+                if (MailService.Instance != null)
+                {
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
+                    {
+                        var row = root[0];
+
+                        // В RETURNING id,... поле называется именно id
+                        if (row.TryGetProperty("id", out var idProp) &&
+                            idProp.ValueKind == JsonValueKind.Number &&
+                            idProp.TryGetInt32(out var serviceId))
+                        {
+                            // serviceId = dog_service.id -> MailService запросит SQL "payment" по этому id
+                            MailService.Instance.PaymentNotification(serviceId);
+                        }
+                    }
+                }
+            }
+            catch (Exception mailEx)
+            {
+                // Не роняем API из-за почты
+                Console.WriteLine($"[BookDogService] mail error: {mailEx}");
+            }
+
             return Content(json, "application/json");
         }
         catch (Exception ex)
