@@ -80,7 +80,6 @@ public class MailService
             string clientPayments = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand(""));
 
             string today = DateTime.Now.ToString("dd MMMM yyyy", rus);
-            email = hostName;
             SendEmail(email, "Ваша подписка на DogHub скоро закончится!", TextFormatter.ModifyStr(notification,[userName, today]));
         }
     }
@@ -171,13 +170,13 @@ public class MailService
         {
             userName = nameElement.GetString() ?? "Уважаемый пользователь";
         }
-        string sum = string.Empty;
-        if (info.TryGetProperty("price", out JsonElement nameElement))
+        double sum = 0;
+        if (info.TryGetProperty("price", out JsonElement sumElement))
         {
-            userName = nameElement.GetString() ?? "Не указано";
+            sum = sumElement.GetDouble();
         }
         string today = DateTime.Now.ToString("dd MMMM yyyy", rus);
-        SendEmail(email, "Информация о платеже", TextFormatter.ModifyStr(payment,[userName, today, sum]));
+        SendEmail(email, "Информация о платеже", TextFormatter.ModifyStr(payment,[userName, today, sum.ToString()]));
     }
 
     /// <summary>
