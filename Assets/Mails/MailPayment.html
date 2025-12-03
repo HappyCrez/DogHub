@@ -1,109 +1,255 @@
-<!-- Принимает два параметра для подстановки вместо символов $,$ (без запятой)-->
-<!-- 1. Имя клиента             -->
-<!-- 2. Дата последней оплаты   -->
-
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DogHub Уведомление</title>
     <style>
+        /* Основные стили */
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Arial', 'Helvetica Neue', sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        
+        .email-container {
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
+        
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
+            padding: 40px 30px;
             text-align: center;
-            border-radius: 10px 10px 0 0;
+            color: white;
         }
-        .content {
-            background: #f9f9f9;
-            padding: 30px;
-            border-radius: 0 0 10px 10px;
-        }
-        .amount {
+        
+        .logo {
             font-size: 32px;
             font-weight: bold;
-            color: #e74c3c;
-            text-align: center;
-            margin: 20px 0;
-        }
-        .due-date {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            padding: 15px;
-            border-radius: 5px;
-            text-align: center;
-            margin: 20px 0;
-        }
-        .details {
-            background: white;
-            padding: 20px;
-            border-radius: 5px;
-            margin: 20px 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .button {
-            display: block;
-            width: 200px;
-            margin: 30px auto;
-            padding: 15px 25px;
-            background: linear-gradient(150deg, #8094f0 0%, #b178eb 100%);
             color: white;
             text-decoration: none;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        
+        .logo-icon {
+            color: #FFD700;
+            margin-right: 8px;
+        }
+        
+        .dog-paw {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background-color: #FFD700;
+            border-radius: 50%;
+            position: relative;
+            margin: 0 5px;
+        }
+        
+        .dog-paw:after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 6px;
+            width: 12px;
+            height: 12px;
+            background-color: #FFD700;
+            border-radius: 50%;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .footer {
+            background-color: #f1f3f9;
+            padding: 30px;
             text-align: center;
-            border-radius: 25px;
+            color: #666666;
+            font-size: 14px;
+        }
+        
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 50px;
             font-weight: bold;
             font-size: 16px;
+            margin: 20px 0;
+            transition: transform 0.3s, box-shadow 0.3s;
         }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            font-size: 12px;
-            color: #7f8c8d;
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.3);
         }
-        .logo {
-            font-size: 24px;
+        
+        .highlight {
+            color: #764ba2;
             font-weight: bold;
+        }
+        
+        .info-box {
+            background-color: #f8f5ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+        }
+        
+        .section-title {
+            color: #333333;
+            font-size: 20px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 25px 0;
+        }
+        
+        .feature {
+            flex: 0 0 48%;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .feature-icon {
+            font-size: 24px;
+            color: #667eea;
             margin-bottom: 10px;
+        }
+        
+        .countdown {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 25px 0;
+        }
+        
+        .days-left {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        @media (max-width: 600px) {
+            .content, .header, .footer {
+                padding: 25px 20px;
+            }
+            
+            .features {
+                flex-direction: column;
+            }
+            
+            .feature {
+                flex: 0 0 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">🐕 DogHub</div>
-        <h1>Оплата прошла успешно!</h1>
-    </div>
-    
-    <div class="content">
-        <p>$$,</p> <!-- Имя клиента -->
+    <div class="email-container">
+        <!-- Шапка -->
+        <div class="header">
+            <a href="https://dog-hub.ru" class="logo">
+                <span class="logo-icon">💰</span>DogHub
+            </a>
+            <h1 style="margin: 0; font-size: 28px; font-weight: 300;">
+                Оплата подтверждена!
+            </h1>
+            <p style="opacity: 0.9; font-size: 18px; margin-top: 10px;">
+                Спасибо за вашу поддержку клуба
+            </p>
+        </div>
         
-        <p>Спасибо, что пользуетесь нашими услугами!</p>
+        <!-- Основное содержание -->
+        <div class="content">
+            <p>Здравствуйте, <span class="highlight">$$</span>! 🎉</p>
+            
+            <p>Мы получили вашу оплату и рады сообщить, что <strong>платеж успешно завершен</strong>!</p>
+            
+            <div class="info-box">
+                <h3 style="margin: 0 0 15px 0; color: #333;">Детали платежа</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">Дата и время:</td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">
+                            $$
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">Сумма:</td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right; font-weight: bold; color: #764ba2;">
+                            $$ ₽
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div style="background-color: #f0fff4; padding: 20px; border-radius: 10px; margin: 25px 0; border-left: 4px solid #48bb78;">
+                <div style="display: flex; align-items: center;">
+                    <div style="font-size: 24px; margin-right: 15px;">✅</div>
+                    <div>
+                        <h3 style="margin: 0 0 5px 0; color: #2f855a;">Оплата успешно обработана</h3>
+                        <p style="margin: 0; color: #666;">Чек будет отправлен вам в отдельном письме</p>
+                    </div>
+                </div>
+            </div>
+            
+            <h2 class="section-title">Что дальше?</h2>
+            
+            <p>Ваш доступ к функциям DogHub активирован. В зависимости от типа оплаты, вам доступны:</p>
+            
+            <ul style="padding-left: 20px; margin: 20px 0;">
+                <li style="margin-bottom: 10px;">🎯 <strong>Участие в мероприятиях</strong> — записывайтесь на тренировки и встречи</li>
+                <li style="margin-bottom: 10px;">📚 <strong>Доступ к курсам</strong> — изучайте материалы от наших экспертов</li>
+                <li style="margin-bottom: 10px;">👥 <strong>Чат сообщества</strong> — общайтесь с другими участниками клуба</li>
+                <li style="margin-bottom: 10px;">🏆 <strong>Специальные предложения</strong> — получайте скидки от партнеров</li>
+            </ul>
+
+            <p style="text-align: center; font-size: 14px; color: #666;">
+                Спасибо, что поддерживаете наш клуб!<br>
+                Ваши средства помогают нам организовывать больше мероприятий для наших четвероногих друзей.
+            </p>
+        </div>
         
-        <a href="https://dog-hub.ru/" class="button">
-            Перейти на сайт
-        </a>
-        
-        <p>Если у вас возникли вопросы, пожалуйста, свяжитесь с нашей службой поддержки:</p>
-        <p>
-            📞 Телефон: +7 (999) 123-45-67<br>
-            📧 Email: support@doghub.ru<br>
-            🌐 Сайт: <a href="https://doghub.ru">https://doghub.ru</a>
-        </p>
-        
-        <p>С уважением,<br>
-        <strong>Команда DogHub</strong></p>
-    </div>
-    
-    <div class="footer">
-        <p>Это письмо было отправлено автоматически. Пожалуйста, не отвечайте на него.</p>
-        <p>© 2025 DogHub. Все права защищены.</p>
+        <!-- Подвал -->
+        <div class="footer">
+            <p style="margin: 0 0 15px 0;">
+                <strong>С уважением, команда DogHub</strong><br>
+                Поддержка: <a href="mailto:payments@dog-hub.ru" style="color: #667eea;">payments@dog-hub.ru</a>
+            </p>
+            <p style="margin: 0 0 15px 0; font-size: 12px; color: #888;">
+                Это автоматическое уведомление о платеже. Пожалуйста, не отвечайте на это письмо.<br>
+                Если у вас есть вопросы по платежу, свяжитесь с нашей службой поддержки.
+            </p>
+            <p style="margin: 0; font-size: 12px; color: #888;">
+                © 2024 DogHub. Все права защищены.
+            </p>
+        </div>
     </div>
 </body>
 </html>
