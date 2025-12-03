@@ -11,6 +11,7 @@ import Training from "./pages/Training";
 import EventDetails from "./pages/EventDetails";
 import ProgramDetails from "./pages/ProgramDetails";
 import PeopleTrainingDetails from "./pages/PeopleTrainingDetails";
+import Services from "./pages/Services";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
 import { AuthProvider } from "./auth/AuthContext";
@@ -54,6 +55,7 @@ export default function App() {
                             <Route path="/events" element={<Events />} />
                             <Route path="/events/:id" element={<EventDetails />} />
                             <Route path="/programs/:id" element={<ProgramDetails />} />
+                            <Route path="/services" element={<Services />} />
                             <Route path="/training" element={<Training />} />
                             <Route path="/trainings/:id" element={<PeopleTrainingDetails />} />
                             <Route path="/members" element={<Members />} />
