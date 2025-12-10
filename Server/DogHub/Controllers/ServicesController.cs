@@ -14,8 +14,8 @@ namespace DogHub.Controllers;
 [Route("services")]
 public class ServicesController : ControllerBase
 {
-    private readonly DataBaseModel _db;
-    private readonly SQLCommandManager _sql;
+    private readonly IDataBaseModel _db;
+    private readonly ISqlCommandManager _sql;
 
     private static readonly IReadOnlyDictionary<string, string> StatusLabels =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -26,7 +26,7 @@ public class ServicesController : ControllerBase
             ["CANCELED"] = "Отменено",
         };
 
-    public ServicesController(DataBaseModel db, SQLCommandManager sql)
+    public ServicesController(IDataBaseModel db, ISqlCommandManager sql)
     {
         _db = db;
         _sql = sql;

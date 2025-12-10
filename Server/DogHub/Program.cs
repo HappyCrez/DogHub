@@ -10,26 +10,29 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        var appConfig = AppConfig.Instance();
+        var sqlCommandManager = SQLCommandManager.Instance;
 
         // Создание экземпляра базы данных
-        var connectionString = AppConfig.Instance().BuildConnectionString();
+        var connectionString = appConfig.BuildConnectionString();
         var db = new DataBaseModel(connectionString);
 
         // Запуск почтового сервиса, если он активирован
         MailService? mailService = null;
-        if (AppConfig.Instance().MailService)
+        if (appConfig.MailService)
         {
-            mailService = new MailService(db);
+            mailService = new MailService(db, sqlCommandManager);
         }
-        else if (AppConfig.Instance().LogLevel <= AppConfig.LogLevels.INFO)
+        else if (appConfig.LogLevel <= AppConfig.LogLevels.INFO)
         {
             Console.WriteLine("MailService is OFF");
         }
 
         // Регистрация зависимостей
-        builder.Services.AddSingleton(AppConfig.Instance());
+        builder.Services.AddSingleton(appConfig);
+        builder.Services.AddSingleton<IDataBaseModel>(db);
         builder.Services.AddSingleton(db);
-        builder.Services.AddSingleton(SQLCommandManager.Instance);
+        builder.Services.AddSingleton(sqlCommandManager);
         builder.Services.AddSingleton<AvatarStorage>();
         builder.Services.AddSingleton<DogPhotoStorage>();
         builder.Services.AddSingleton<TokenService>();
@@ -47,7 +50,7 @@ public class Program
                     .AllowAnyHeader()
                     .AllowAnyMethod();
 
-                var origins = AppConfig.Instance().CorsAllowedOrigins;
+                var origins = appConfig.CorsAllowedOrigins;
                 if (origins.Count == 0)
                 {
                     policy.AllowAnyOrigin();
@@ -61,7 +64,7 @@ public class Program
         });
 
         // Настройка JWT-аутентификации
-        var key = Encoding.UTF8.GetBytes(AppConfig.Instance().JwtSecret);
+        var key = Encoding.UTF8.GetBytes(appConfig.JwtSecret);
 
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -70,10 +73,10 @@ public class Program
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = AppConfig.Instance().JwtIssuer,
+                    ValidIssuer = appConfig.JwtIssuer,
 
                     ValidateAudience = true,
-                    ValidAudience = AppConfig.Instance().JwtAudience,
+                    ValidAudience = appConfig.JwtAudience,
 
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(key),

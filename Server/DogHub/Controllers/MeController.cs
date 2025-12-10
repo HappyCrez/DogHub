@@ -17,11 +17,11 @@ namespace DogHub.Controllers;
 [Authorize] // любой залогиненный: Пользователь / Тренер / Администратор
 public class MeController : ControllerBase
 {
-    private readonly DataBaseModel _db;
+    private readonly IDataBaseModel _db;
     private readonly AvatarStorage _avatarStorage;
     private readonly DogPhotoStorage _dogPhotoStorage;
 
-    public MeController(DataBaseModel db, AvatarStorage avatarStorage, DogPhotoStorage dogPhotoStorage)
+    public MeController(IDataBaseModel db, AvatarStorage avatarStorage, DogPhotoStorage dogPhotoStorage)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _avatarStorage = avatarStorage ?? throw new ArgumentNullException(nameof(avatarStorage));

@@ -13,15 +13,15 @@ namespace DogHub.Controllers;
 [Route("events")]
 public class EventsController : ControllerBase
 {
-    private readonly DataBaseModel _db;
-    private readonly SQLCommandManager _sql;
+    private readonly IDataBaseModel _db;
+    private readonly ISqlCommandManager _sql;
     private static readonly HashSet<string> EventDateColumns = new(StringComparer.OrdinalIgnoreCase)
     {
         "start_at",
         "end_at"
     };
 
-    public EventsController(DataBaseModel db, SQLCommandManager sql)
+    public EventsController(IDataBaseModel db, ISqlCommandManager sql)
     {
         _db = db;
         _sql = sql;

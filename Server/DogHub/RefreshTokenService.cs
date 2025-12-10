@@ -8,11 +8,11 @@ namespace DogHub;
 
 public sealed class RefreshTokenService
 {
-    private readonly DataBaseModel _db;
-    private readonly SQLCommandManager _sql;
+    private readonly IDataBaseModel _db;
+    private readonly ISqlCommandManager _sql;
     private readonly AppConfig _config;
 
-    public RefreshTokenService(DataBaseModel db, SQLCommandManager sql, AppConfig config)
+    public RefreshTokenService(IDataBaseModel db, ISqlCommandManager sql, AppConfig config)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _sql = sql ?? throw new ArgumentNullException(nameof(sql));

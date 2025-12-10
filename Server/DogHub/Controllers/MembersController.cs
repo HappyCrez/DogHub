@@ -11,10 +11,10 @@ namespace DogHub.Controllers;
 [Route("members")]
 public class MembersController : ControllerBase
 {
-    private readonly DataBaseModel _db;
-    private readonly SQLCommandManager _sql;
+    private readonly IDataBaseModel _db;
+    private readonly ISqlCommandManager _sql;
 
-    public MembersController(DataBaseModel db, SQLCommandManager sql)
+    public MembersController(IDataBaseModel db, ISqlCommandManager sql)
     {
         _db = db;
         _sql = sql;
