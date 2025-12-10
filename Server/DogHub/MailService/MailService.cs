@@ -23,7 +23,8 @@ public class MailService
     // Флаг управления потоком
     private bool mailServiceRunning;
 
-    private DataBaseModel database { get; set; }
+    private readonly IDataBaseModel database;
+    private readonly ISqlCommandManager sqlCommandManager;
 
     // Для форматирования даты
     private System.Globalization.CultureInfo rus = new System.Globalization.CultureInfo("ru-RU");
@@ -46,7 +47,7 @@ public class MailService
 
     private void Notificate()
     {
-        string records = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand("notifications"));
+        string records = database.ExecuteSQL(sqlCommandManager.GetCommand("notifications"));
         foreach (JsonElement client in JsonDocument.Parse(records).RootElement.EnumerateArray())
         {
             string userName = "Клиент";
@@ -77,7 +78,7 @@ public class MailService
             // НЕЗАКОНЧЕННО
             // Необходимо чтобы здесь мы получали все платежи клиента и искали среди них последний платеж за подписку
             // А затем сравнивали дату последнего платежа с текущей  
-            string clientPayments = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand(""));
+            string clientPayments = database.ExecuteSQL(sqlCommandManager.GetCommand(""));
 
             string today = DateTime.Now.ToString("dd MMMM yyyy", rus);
             SendEmail(email, "Ваша подписка на DogHub скоро закончится!", TextFormatter.ModifyStr(notification,[userName, today]));
@@ -156,7 +157,7 @@ public class MailService
     {
         // Получаем данные платежа
         var paymentParams = new Dictionary<string, object?> { ["id"] = paymentId };
-        string paymentData = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand("payment"), paymentParams);
+        string paymentData = database.ExecuteSQL(sqlCommandManager.GetCommand("payment"), paymentParams);
 
         JsonElement info = JsonDocument.Parse(paymentData).RootElement[0];
         string email = string.Empty;
@@ -187,7 +188,7 @@ public class MailService
     {
         // Получаем данные платежа
         var memberParams = new Dictionary<string, object?> { ["id"] = memberId };
-        string memberData = database.ExecuteSQL(SQLCommandManager.Instance.GetCommand("member"), memberParams);
+        string memberData = database.ExecuteSQL(sqlCommandManager.GetCommand("member"), memberParams);
 
         JsonElement info = JsonDocument.Parse(memberData).RootElement[0];
         string email = string.Empty;
@@ -210,8 +211,10 @@ public class MailService
     /// <param name="database">
     /// Модель базы данных для подключение к физической БД
     /// </param>
-    public MailService(DataBaseModel database)
+    public MailService(IDataBaseModel database, ISqlCommandManager sqlCommandManager)
     {
+        this.database = database ?? throw new ArgumentNullException(nameof(database));
+        this.sqlCommandManager = sqlCommandManager ?? throw new ArgumentNullException(nameof(sqlCommandManager));
         this.hostName = AppConfig.Instance().MailHost;
         this.hostPassword = AppConfig.Instance().MailPassword;
         this.timeout = int.Parse(AppConfig.Instance().MailTimeout);
@@ -220,9 +223,6 @@ public class MailService
         notification = File.ReadAllText($"{AppConfig.Instance().MailFilePath}/MailNotification.html");
         payment = File.ReadAllText($"{AppConfig.Instance().MailFilePath}/MailPayment.html");
         welcome = File.ReadAllText($"{AppConfig.Instance().MailFilePath}/MailWelcome.html");
-
-        // БД для исполнения запросов
-        this.database = database;
 
         // Отделяем проверку состояния БД в отдельный поток
         mailServiceRunning = true; // Флаг завершения работы потока

@@ -8,16 +8,16 @@ using System.Text.Json;
 /// <summary>
 /// Загружает SQL-команды из файла SQLCommands.json и предоставляет доступ к ним по имени
 /// </summary>
-public class SQLCommandManager
+public class SQLCommandManager : ISqlCommandManager
 {
     private readonly JsonElement jsonData;
     private readonly string sourcePath;
 
     // Ленивая инициализация синглтона
-    private static readonly Lazy<SQLCommandManager> lazy =
+    private static readonly Lazy<ISqlCommandManager> lazy =
         new(() => new SQLCommandManager(FindSqlCommandsPath()));
 
-    public static SQLCommandManager Instance => lazy.Value;
+    public static ISqlCommandManager Instance => lazy.Value;
 
     private SQLCommandManager(string filePath)
     {
