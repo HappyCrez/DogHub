@@ -12,7 +12,6 @@ namespace DogHub;
 /// </summary>
 public class AvatarStorage
 {
-    private const long MaxAvatarSizeBytes = 5 * 1024 * 1024; // 5 MB
 
     private static readonly IReadOnlyDictionary<string, string> ContentTypeToExtension =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -37,11 +36,6 @@ public class AvatarStorage
         if (file == null || file.Length == 0)
         {
             throw new InvalidOperationException("Файл аватара не получен.");
-        }
-
-        if (file.Length > MaxAvatarSizeBytes)
-        {
-            throw new InvalidOperationException("Файл слишком большой. Максимум 5 МБ.");
         }
 
         var extension = ResolveExtension(file.ContentType, file.FileName);

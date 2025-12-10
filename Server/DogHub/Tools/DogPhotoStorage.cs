@@ -12,7 +12,6 @@ namespace DogHub;
 /// </summary>
 public class DogPhotoStorage
 {
-    private const long MaxPhotoSizeBytes = 5 * 1024 * 1024; // 5 MB
 
     private static readonly IReadOnlyDictionary<string, string> ContentTypeToExtension =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -39,11 +38,6 @@ public class DogPhotoStorage
         if (file == null || file.Length == 0)
         {
             throw new InvalidOperationException("Файл фотографии собаки не получен.");
-        }
-
-        if (file.Length > MaxPhotoSizeBytes)
-        {
-            throw new InvalidOperationException("Файл слишком большой. Максимум 5 МБ.");
         }
 
         var extension = ResolveExtension(file.ContentType, file.FileName);
