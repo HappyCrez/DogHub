@@ -42,13 +42,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [token, setToken] = useState<string | null>(null);
     const [isReady, setIsReady] = useState(false);
     const tokenRef = useRef<string | null>(null);
-    const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const refreshTimerRef = useRef<number | null>(null);
     const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
     const refreshSessionRef = useRef<(() => Promise<boolean>) | null>(null);
 
     const clearTimer = () => {
-        if (refreshTimerRef.current) {
-            clearTimeout(refreshTimerRef.current);
+        if (refreshTimerRef.current !== null) {
+            window.clearTimeout(refreshTimerRef.current);
             refreshTimerRef.current = null;
         }
     };
