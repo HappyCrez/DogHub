@@ -14,8 +14,8 @@ namespace DogHub.Controllers;
 [Route("programs")]
 public class ProgramsController : ControllerBase
 {
-    private readonly DataBaseModel _db;
-    private readonly SQLCommandManager _sql;
+    private readonly IDataBaseModel _db;
+    private readonly ISqlCommandManager _sql;
     private static readonly HashSet<string> ProgramColumns = new(StringComparer.OrdinalIgnoreCase)
     {
         "title",
@@ -24,7 +24,7 @@ public class ProgramsController : ControllerBase
         "description"
     };
 
-    public ProgramsController(DataBaseModel db, SQLCommandManager sql)
+    public ProgramsController(IDataBaseModel db, ISqlCommandManager sql)
     {
         _db = db;
         _sql = sql;

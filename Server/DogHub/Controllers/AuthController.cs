@@ -12,16 +12,16 @@ namespace DogHub.Controllers;
 [Route("auth")]
 public class AuthController : ControllerBase
 {
-    private readonly DataBaseModel _db;
-    private readonly SQLCommandManager _sql;
+    private readonly IDataBaseModel _db;
+    private readonly ISqlCommandManager _sql;
     private readonly TokenService _tokenService;
     private readonly RefreshTokenService _refreshTokenService;
     private readonly AppConfig _config;
     private const string RefreshCookieName = "doghub_refresh_token";
 
     public AuthController(
-        DataBaseModel db,
-        SQLCommandManager sql,
+        IDataBaseModel db,
+        ISqlCommandManager sql,
         TokenService tokenService,
         RefreshTokenService refreshTokenService,
         AppConfig config)

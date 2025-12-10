@@ -5,7 +5,7 @@ using Npgsql;
 
 namespace DogHub;
 
-public class DataBaseModel
+public class DataBaseModel : IDataBaseModel
 {
     // Строка подключения к базе данных
     private readonly string connectionString;
