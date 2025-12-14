@@ -3,7 +3,7 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm install -D vitest @testing-library/react @testing-library/user-event @testing-library/jest-dom jsdom
 
 COPY . .
 RUN npm run build   # Vite билдит в /app/dist
@@ -11,15 +11,8 @@ RUN npm run build   # Vite билдит в /app/dist
 # --- runtime + nginx ---
 FROM nginx:alpine
 
-# # свой конфиг nginx
-# RUN rm /etc/nginx/conf.d/default.conf
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
-
 # статика фронта
 COPY --from=build /app/dist /usr/share/nginx/html
-
-# сертификаты
-# COPY ../Docker/certs /etc/nginx/certs
 
 EXPOSE 443
 
